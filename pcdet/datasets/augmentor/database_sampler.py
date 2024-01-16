@@ -27,6 +27,7 @@ class DataBaseSampler(object):
 
         self.logger = logger
         self.db_infos = {}
+        self.init = True
         self.update_db_infos()
 
     def __getstate__(self):
@@ -62,9 +63,7 @@ class DataBaseSampler(object):
                     continue
                 assert len(self.sampler_cfg.DB_INFO_PATH) == 1
                 self.sampler_cfg.DB_INFO_PATH[0] = self.sampler_cfg.BACKUP_DB_INFO['DB_INFO_PATH']
-                self.sampler_cfg.DB_DATA_PATH[0] = self.sampler_cfg.BACKUP_DB_INFO['DB_DATA_PATH']
                 db_info_path = self.root_path.resolve() / self.sampler_cfg.DB_INFO_PATH[0]
-                self.sampler_cfg.NUM_POINT_FEATURES = self.sampler_cfgg.BACKUP_DB_INFO['NUM_POINT_FEATURES']
 
             with open(str(db_info_path), 'rb') as f:
                 infos = pickle.load(f)
@@ -79,7 +78,12 @@ class DataBaseSampler(object):
         self.sample_class_num = {}
         self.limit_whole_scene = self.sampler_cfg.get('LIMIT_WHOLE_SCENE', False)
 
-        for x in self.sampler_cfg.SAMPLE_GROUPS:
+        if self.init and self.sampling_type == 'gt':
+            self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
+        else:
+            self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
+
+        for x in self.sample_groups_cfg:
             class_name, sample_num = x.split(':')
             if class_name not in self.class_names:
                 continue
@@ -89,18 +93,18 @@ class DataBaseSampler(object):
                 'pointer': len(self.db_infos[class_name]),
                 'indices': np.arange(len(self.db_infos[class_name]))
             }
-        
+
+        self.scores = []
         self.set_scores()
+        self.init = False
 
 
     def set_scores(self):
-        # load self.score_info_path
-        self.score_info_path = self.root_path.resolve() / self.sampler_cfg.SCORE_INFO_PATH
-        if self.score_info_path.exists():
-            with open(str(self.score_info_path), 'rb') as f:
-                self.scores = pickle.load(f)
-        else:
-            self.scores = []
+        # TODO: 안예쁨
+        for c in self.class_names:
+            for k in self.db_infos[c]:
+                if 'iou_score' in k.keys():
+                    self.scores.append(k['iou_score'])
             
 
     def load_db_to_shared_memory(self):
@@ -511,6 +515,8 @@ class DataBaseSampler(object):
             if int(sample_group['sample_num']) > 0:
                 sampled_dict = self.sample_with_fixed_number(class_name, sample_group)
 
+                if len(sampled_dict) == 0:
+                    continue
                 sampled_boxes = np.stack([x['box3d_lidar'] for x in sampled_dict], axis=0).astype(np.float32)
 
                 assert not self.sampler_cfg.get('DATABASE_WITH_FAKELIDAR', False), 'Please use latest codes to generate GT_DATABASE'

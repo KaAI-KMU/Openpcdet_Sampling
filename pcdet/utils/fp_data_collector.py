@@ -67,20 +67,6 @@ class FPDataCollector:
                     max_ious = ious.max(axis=1)
                     selected = max_ious < 0.1
 
-                # 클래스별 임계값 적용
-                for cls_id, cls_name in enumerate(self.class_names):
-                    cls_mask = pred_classes.cpu().numpy() == (cls_id + 1)
-                    
-                    if cls_name == 'Car':
-                        threshold = 0.5
-                    elif cls_name == 'Cyclist':
-                        threshold = 0.6
-                    elif cls_name == 'Pedestrian':
-                        threshold = 0.6
-
-                    cls_selected = (pred_scores.cpu().numpy() < threshold) & cls_mask
-                    selected = selected | cls_selected
-
                 pred_dicts[batch_idx] = {key: val[selected] for key, val in pred_dicts[batch_idx].items()}
 
             fp_label_dict = self.generate_single_db(pred_dicts, batch_dict, labeled_indices, all_db_infos)
