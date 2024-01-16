@@ -74,6 +74,7 @@ class DataBaseSampler(object):
 
         self.gt_database_data_key = self.load_db_to_shared_memory() if self.use_shared_memory else None
 
+        self.scores = []
         self.sample_groups = {}
         self.sample_class_num = {}
         self.limit_whole_scene = self.sampler_cfg.get('LIMIT_WHOLE_SCENE', False)
@@ -82,7 +83,7 @@ class DataBaseSampler(object):
             self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
         else:
             self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
-
+            
         for x in self.sample_groups_cfg:
             class_name, sample_num = x.split(':')
             if class_name not in self.class_names:
@@ -93,20 +94,17 @@ class DataBaseSampler(object):
                 'pointer': len(self.db_infos[class_name]),
                 'indices': np.arange(len(self.db_infos[class_name]))
             }
-
-        self.scores = []
-        self.set_scores()
-        self.init = False
-
-
-    def set_scores(self):
-        # TODO: 안예쁨
-        for c in self.class_names:
-            for k in self.db_infos[c]:
-                if 'iou_score' in k.keys():
-                    self.scores.append(k['iou_score'])
             
+        self.scores = {}  
+        for class_name in self.class_names:
+            class_scores = [] 
+            for db_info in self.db_infos[class_name]:
+                iou_score = db_info.get('iou_score')
+                class_scores.append(iou_score)
+            self.scores[class_name] = class_scores  
 
+        self.init = False
+            
     def load_db_to_shared_memory(self):
         self.logger.info('Loading GT database to shared memory')
         cur_rank, world_size, num_gpus = common_utils.get_dist_info(return_gpu_per_machine=True)
@@ -167,9 +165,15 @@ class DataBaseSampler(object):
                 indices = np.arange(len(self.db_infos[class_name]))
                 weights = None
             elif self.ratio_sampling_type == 'x':
-                weights = np.array(self.scores * 10, dtype=np.int32)
+                if np.all(np.array(self.scores[class_name])) == None:
+                    weights = None 
+                else:
+                    weights = np.array(np.array(self.scores[class_name]) * 10, dtype=np.int32)
             elif self.ratio_sampling_type == '1/x':
-                weights = np.array(1 / self.scores, dtype=np.int32) # TODO: 예외처리
+                if np.all(np.array(self.scores[class_name])) == None:
+                    weights = None
+                else:
+                    weights = np.array(1 / np.array(self.scores[class_name]), dtype=np.int32) # TODO: 예외처리
             else:
                 raise NotImplementedError
 

@@ -14,7 +14,7 @@ from tensorboardX import SummaryWriter
 from pcdet.config import cfg, cfg_from_list, cfg_from_yaml_file, log_config_to_file
 from pcdet.datasets import build_dataloader
 from pcdet.models import build_network, model_fn_decorator
-from pcdet.utils import common_utils , fp_data_collector
+from pcdet.utils import common_utils , data_collector
 from train_utils.optimization import build_optimizer, build_scheduler
 from train_utils.train_utils import train_model
 
@@ -160,12 +160,12 @@ def main():
                 except:
                     ckpt_list = ckpt_list[:-1]
                           
-    if cfg.DATA_CONFIG.get('FP_LABEL_GENERATING_CONFIG', None) is not None:
-        sampling_config = cfg.DATA_CONFIG.FP_LABEL_GENERATING_CONFIG
+    if cfg.DATA_CONFIG.get('LABEL_GENERATING_CONFIG', None) is not None:
+        sampling_config = cfg.DATA_CONFIG.LABEL_GENERATING_CONFIG
         if sampling_config is None:
-            fp_sampler = None
+            sampler = None
         else:
-            _, fp_dataloader,_ = build_dataloader(
+            _, sample_dataloader,_ = build_dataloader(
                 dataset_cfg=cfg.DATA_CONFIG,
                 class_names=cfg.CLASS_NAMES,
                 batch_size=args.batch_size,
@@ -177,14 +177,14 @@ def main():
                 seed=666 if args.fix_random_seed else None,
                 disable_augmentation=True
             )
-            fp_sampler = fp_data_collector.FPDataCollector(
-                sampler_cfg=sampling_config, model = model, dataloader=fp_dataloader
+            sampler = data_collector.DataCollector(
+                sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader
             )
             if start_epoch == 0:
-                fp_sampler.clear_database()
+                sampler.clear_database()
     else:
         sampling_config = None
-        fp_sampler = None
+        sampler = None
 
     model.train()  # before wrap to DistributedDataParallel to support fixed some parameters
     if dist_train:
@@ -216,7 +216,7 @@ def main():
         tb_log=tb_log,
         ckpt_save_dir=ckpt_dir,
         train_sampler=train_sampler,
-        fp_collector = fp_sampler,
+        collector = sampler,
         lr_warmup_scheduler=lr_warmup_scheduler,
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,

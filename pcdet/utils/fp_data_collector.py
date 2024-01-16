@@ -39,41 +39,6 @@ class FPDataCollector:
         if self.db_info_save_path.exists():
             self.db_info_save_path.unlink()
 
-    def sample_fp_labels(self):
-        self.clear_database()
-        self.model.eval()
-        all_db_infos = {}
-
-        for batch_dict in tqdm(self.dataloader, desc='fp_labels_generating', leave=True):
-            batch_size = batch_dict['batch_size']
-            load_data_to_gpu(batch_dict)
-            labeled_indices = [int(batch_dict['frame_id'][batch_idx]) in self.labeled_mask for batch_idx in range(batch_size)]
-
-            with torch.no_grad():
-                pred_dicts, _ = self.model(batch_dict)
-
-            for batch_idx in range(batch_size):
-                pred_scores = pred_dicts[batch_idx]['pred_scores']
-                gt_boxes = batch_dict['gt_boxes'][batch_idx][:, :7]
-                pred_boxes = pred_dicts[batch_idx]['pred_boxes']
-                pred_classes = pred_dicts[batch_idx]['pred_labels']
-                if pred_boxes.shape[0] == 0:
-                    continue
-
-                selected = np.array([False] * len(pred_classes))
-
-                if gt_boxes.shape[0] > 0:
-                    ious = iou3d_nms_utils.boxes_iou3d_gpu(pred_boxes, gt_boxes).cpu().numpy()
-                    max_ious = ious.max(axis=1)
-                    selected = max_ious < 0.1
-
-                pred_dicts[batch_idx] = {key: val[selected] for key, val in pred_dicts[batch_idx].items()}
-
-            fp_label_dict = self.generate_single_db(pred_dicts, batch_dict, labeled_indices, all_db_infos)
-
-        self.save_db_infos(fp_label_dict)
-
-
     def generate_single_db(self, fp_labels, batch_dict, labeled_mask, db_infos):
         batch_size = batch_dict['batch_size']
         fp_labels_size = len(fp_labels)
