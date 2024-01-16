@@ -9,6 +9,8 @@ DATA_CONFIG:
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
                   - kitti_dbinfos_train.pkl
+              SCORE_INFO_PATH:
+                  - kitti_scoreinfos_train.pkl
               PREPARE: {
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
@@ -19,6 +21,7 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
+              RATIO_SAMPLING_TYPE: 'uniform'
 
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
@@ -33,6 +36,7 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
+              RATIO_SAMPLING_TYPE: 'uniform'
 
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']

@@ -23,6 +23,7 @@ class DataBaseSampler(object):
         
         self.img_aug_type = sampler_cfg.get('IMG_AUG_TYPE', None)
         self.img_aug_iou_thresh = sampler_cfg.get('IMG_AUG_IOU_THRESH', 0.5)
+        self.ratio_sampling_type = sampler_cfg.get('RATIO_SAMPLING_TYPE', None)
 
         self.logger = logger
         self.db_infos = {}
@@ -87,7 +88,19 @@ class DataBaseSampler(object):
                 'sample_num': sample_num,
                 'pointer': len(self.db_infos[class_name]),
                 'indices': np.arange(len(self.db_infos[class_name]))
-            }        
+            }
+        
+        self.set_scores()
+
+
+    def set_scores(self):
+        # load self.score_info_path
+        self.score_info_path = self.root_path.resolve() / self.sampler_cfg.SCORE_INFO_PATH
+        if self.score_info_path.exists():
+            with open(str(self.score_info_path), 'rb') as f:
+                self.scores = pickle.load(f)
+        else:
+            self.scores = []
             
 
     def load_db_to_shared_memory(self):
@@ -146,7 +159,19 @@ class DataBaseSampler(object):
         """
         sample_num, pointer, indices = int(sample_group['sample_num']), sample_group['pointer'], sample_group['indices']
         if pointer >= len(self.db_infos[class_name]):
-            indices = np.random.permutation(len(self.db_infos[class_name]))
+            if self.ratio_sampling_type == 'uniform' or len(self.scores) == 0:
+                indices = np.arange(len(self.db_infos[class_name]))
+                weights = None
+            elif self.ratio_sampling_type == 'x':
+                weights = np.array(self.scores * 10, dtype=np.int32)
+            elif self.ratio_sampling_type == '1/x':
+                weights = np.array(1 / self.scores, dtype=np.int32) # TODO: 예외처리
+            else:
+                raise NotImplementedError
+
+            if weights is not None:
+                indices = np.repeat(np.arange(len(self.db_infos[class_name])), weights)
+            indices = np.random.permutation(indices)
             pointer = 0
 
         sampled_dict = [self.db_infos[class_name][idx] for idx in indices[pointer: pointer + sample_num]]

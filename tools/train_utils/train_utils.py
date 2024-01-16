@@ -150,7 +150,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
 
 
 def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_cfg, sampling_config,
-                start_epoch, total_epochs, start_iter, rank, tb_log, ckpt_save_dir, train_sampler=None, fp_collector=None,
+                start_epoch, total_epochs, start_iter, rank, tb_log, ckpt_save_dir, train_sampler=None, fp_collector=None, gt_collector=None,
                 lr_warmup_scheduler=None, ckpt_save_interval=1, max_ckpt_save_num=50,
                 merge_all_iters_to_one_epoch=False, use_amp=False,
                 use_logger_to_record=False, logger=None, logger_iter_interval=None, ckpt_save_time_interval=None, show_gpu_stat=False, cfg=None):
@@ -169,15 +169,21 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
 
         if fp_collector is not None:
             fp_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='fp_sampling')
+        if gt_collector is not None:
+            gt_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='gt_sampling')
 
         dataloader_iter = iter(train_loader)
         for cur_epoch in tbar:
             if train_sampler is not None:
                 train_sampler.set_epoch(cur_epoch)
                 
-            if fp_collector is not None and (cur_epoch + 1) % sampling_config.INTERVAL == 0:
-                fp_collector.sample_fp_labels()
-                fp_sampler.update_db_infos()
+            if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
+                if fp_collector is not None:
+                    fp_collector.sample_fp_labels()
+                    fp_sampler.update_db_infos()
+                if gt_collector is not None:
+                    gt_collector.sample_gt_labels()
+                    gt_sampler.set_scores()
                 
             # train one epoch
             if lr_warmup_scheduler is not None and cur_epoch < optim_cfg.WARMUP_EPOCH:
