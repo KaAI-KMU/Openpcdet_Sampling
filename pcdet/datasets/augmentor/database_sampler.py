@@ -154,7 +154,7 @@ class DataBaseSampler(object):
                         self.logger.info('GT : Database filter by min points %s: %d => %d' %
                                          (name, len(db_infos[name]), len(filtered_infos)))
                     elif self.sampling_type == 'fp':
-                        self.logger.info('Database filter by min points %s: %d => %d' %
+                        self.logger.info('FP : Database filter by min points %s: %d => %d' %
                                          (name, len(db_infos[name]), len(filtered_infos)))
                     else:
                         raise NotImplementedError
