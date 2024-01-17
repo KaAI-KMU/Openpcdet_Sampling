@@ -150,8 +150,14 @@ class DataBaseSampler(object):
                         filtered_infos.append(info)
 
                 if self.logger is not None:
-                    self.logger.info('Database filter by min points %s: %d => %d' %
-                                     (name, len(db_infos[name]), len(filtered_infos)))
+                    if self.sampling_type == 'gt':
+                        self.logger.info('GT : Database filter by min points %s: %d => %d' %
+                                         (name, len(db_infos[name]), len(filtered_infos)))
+                    elif self.sampling_type == 'fp':
+                        self.logger.info('Database filter by min points %s: %d => %d' %
+                                         (name, len(db_infos[name]), len(filtered_infos)))
+                    else:
+                        raise NotImplementedError
                 db_infos[name] = filtered_infos
 
         return db_infos
