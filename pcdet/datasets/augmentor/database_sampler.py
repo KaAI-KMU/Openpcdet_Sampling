@@ -131,7 +131,12 @@ class DataBaseSampler(object):
                 if info['difficulty'] not in removed_difficulty
             ]
             if self.logger is not None:
-                self.logger.info('Database filter by difficulty %s: %d => %d' % (key, pre_len, len(new_db_infos[key])))
+                if self.sampling_type == 'gt':
+                    self.logger.info('GT : Database filter by difficulty %s: %d => %d' % (key, pre_len, len(new_db_infos[key])))
+                elif self.sampling_type == 'fp':
+                    self.logger.info('FP : Database filter by difficulty %s: %d => %d' % (key, pre_len, len(new_db_infos[key])))
+                else:
+                    raise NotImplementedError
         return new_db_infos
 
     def filter_by_min_points(self, db_infos, min_gt_points_list):

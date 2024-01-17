@@ -65,7 +65,7 @@ class DataCollector:
                     'gt_labels': gt_boxes[:, -1].to(torch.int64),
                     'gt_scores' : max_ious_gt
                 }
-            #TODO: IoU 0일때 0.1이하면 0.1로 바꾸기 clip clamp
+
             fp_label_dict = self.fp_data_collector.generate_single_db(fp_pred_dict, batch_dict, labeled_indices, all_db_infos_fp)
             gt_label_dict = self.gt_data_collector.generate_single_db(gt_pred_dict, batch_dict, labeled_indices, all_db_infos_gt)
 
