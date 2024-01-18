@@ -184,7 +184,12 @@ class DataBaseSampler(object):
                 if np.all(np.array(self.scores[class_name])) == None:
                     weights = None
                 else:
-                    weights = np.array(1 / np.array(self.scores[class_name]), dtype=np.int32) # TODO: 예외처리
+                    weights = np.array(1 / np.array(self.scores[class_name]), dtype=np.int32) 
+            elif self.ratio_sampling_type == 'cb':
+                if np.all(np.array(self.scores[class_name])) == None:
+                    weights = None
+                else:
+                    weights = self.calculate_weights_for_class(np.array(self.scores[class_name]))
             else:
                 raise NotImplementedError
 
@@ -198,7 +203,16 @@ class DataBaseSampler(object):
         sample_group['pointer'] = pointer
         sample_group['indices'] = indices
         return sampled_dict
-
+    
+    def calculate_weights_for_class(self, class_scores, num_bins=10):
+        bins = np.linspace(0, 1, num_bins + 1)
+        digitized = np.digitize(class_scores, bins)
+        bin_counts = np.bincount(digitized, minlength=num_bins+1)[1:]
+        weights = bin_counts
+        normalized_weights = weights / np.sum(weights) * num_bins
+        sample_weights = normalized_weights[digitized - 1] * 10
+        return sample_weights.astype(np.int32)
+    
     @staticmethod
     def put_boxes_on_road_planes(gt_boxes, road_planes, calib):
         """
