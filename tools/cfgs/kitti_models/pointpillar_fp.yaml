@@ -42,6 +42,21 @@ DATA_CONFIG:
               LIMIT_WHOLE_SCENE: False
               RATIO_SAMPLING_TYPE: 'uniform'
 
+            - NAME: fp_sampling 
+              USE_ROAD_PLANE: True
+              DB_INFO_PATH:
+                  - kitti_dbinfos_runtime.pkl
+              PREPARE: {
+                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+                  filter_by_difficulty: [-1],
+              }
+              SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              NUM_POINT_FEATURES: 4
+              DATABASE_WITH_FAKELIDAR: False
+              REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+              LIMIT_WHOLE_SCENE: False
+              RATIO_SAMPLING_TYPE: 'uniform'
+
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']
 
