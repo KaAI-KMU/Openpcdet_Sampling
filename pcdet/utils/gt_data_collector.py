@@ -22,11 +22,17 @@ class GTDataCollector:
         self.root_path = dataloader.dataset.root_path
         self.class_names = dataloader.dataset.class_names
 
-        self.database_save_path = Path(self.root_path) / 'gt_database_runtime_train'
-        self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_score_train.pkl'
-
-        imageset_file = self.root_path / 'ImageSets' / 'train.txt'
-        self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        if self.sampler_cfg['Dataset'] == 'KITTI':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime_train'
+            self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_score_train.pkl'
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        elif self.sampler_cfg['Dataset'] == 'Waymo':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime_train'
+            self.db_info_save_path = Path(self.root_path) / 'waymo_processed_data_v0_5_0_waymo_dbinfos_score_train_sampled_1.pkl'  
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            with open(imageset_file, 'r') as file:
+                self.labeled_mask = [line.strip() for line in file.readlines()]
     
         self.class_names = np.array(self.class_names)
     
@@ -38,7 +44,7 @@ class GTDataCollector:
         if self.db_info_save_path.exists():
             self.db_info_save_path.unlink()
 
-    def generate_single_db(self, gt_labels, batch_dict, labeled_mask, db_infos):
+    def generate_single_db(self, gt_labels, batch_dict, db_infos):
         batch_size = batch_dict['batch_size']
         gt_labels_size = len(gt_labels)
         for batch_idx in range(batch_size):

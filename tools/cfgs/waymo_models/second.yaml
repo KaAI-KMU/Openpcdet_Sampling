@@ -2,7 +2,44 @@ CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
 
 DATA_CONFIG:
     _BASE_CONFIG_: cfgs/dataset_configs/waymo_dataset.yaml
+    DATA_AUGMENTOR:
+        DISABLE_AUG_LIST: ['placeholder']
+        AUG_CONFIG_LIST:
+            - NAME: gt_sampling
+              USE_ROAD_PLANE: False
+              DB_INFO_PATH: 
+                  - waymo_processed_data_v0_5_0_waymo_dbinfos_score_train_sampled_1.pkl
+              USE_SHARED_MEMORY: False
+              BACKUP_DB_INFO:
+                  DB_INFO_PATH: waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1.pkl
+                  NUM_POINT_FEATURES: 5
+              PREPARE: {
+                 filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+                 filter_by_difficulty: [-1],
+              }
 
+              SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              NUM_POINT_FEATURES: 5
+              REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+              LIMIT_WHOLE_SCENE: False
+              RATIO_SAMPLING_TYPE: 'uniform'
+
+            - NAME: random_world_flip
+              ALONG_AXIS_LIST: ['x', 'y']
+
+            - NAME: random_world_rotation
+              WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
+
+            - NAME: random_world_scaling
+              WORLD_SCALE_RANGE: [0.95, 1.05]
+
+    LABEL_GENERATING_CONFIG:
+        CLS_THRESHOLD: [0.9, 0.9, 0.9]
+        IOU_THRESHOLD: [0.9, 0.7, 0.7]
+        INTERVAL: 5
+        K : 0.5
+        Dataset : 'Waymo'
 
 MODEL:
     NAME: SECONDNet

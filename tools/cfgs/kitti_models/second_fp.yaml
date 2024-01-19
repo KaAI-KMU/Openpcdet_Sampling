@@ -54,6 +54,7 @@ DATA_CONFIG:
         INTERVAL: 5
         K : 0.5
         REMOVE_THRESHOLD: 0.2
+        Dataset : 'KITTI'
 
 MODEL:
     NAME: SECONDNet
