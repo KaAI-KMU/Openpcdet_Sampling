@@ -22,12 +22,17 @@ class FPDataCollector:
         self.root_path = dataloader.dataset.root_path
         self.class_names = dataloader.dataset.class_names
 
-        # split_name을 사용하지 않고, 고정된 경로 사용
-        self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
-        self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_runtime.pkl'
-
-        imageset_file = self.root_path / 'ImageSets' / 'train.txt'
-        self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        if self.sampler_cfg['Dataset'] == 'KITTI':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+            self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_runtime.pkl'
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        elif self.sampler_cfg['Dataset'] == 'Waymo':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+            self.db_info_save_path = Path(self.root_path) / 'waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl'  
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            with open(imageset_file, 'r') as file:
+                self.labeled_mask = [line.strip() for line in file.readlines()]
     
         self.class_names = np.array(self.class_names)
     
@@ -39,7 +44,7 @@ class FPDataCollector:
         if self.db_info_save_path.exists():
             self.db_info_save_path.unlink()
 
-    def generate_single_db(self, fp_labels, batch_dict, labeled_mask, db_infos):
+    def generate_single_db(self, fp_labels, batch_dict, db_infos):
         batch_size = batch_dict['batch_size']
         fp_labels_size = len(fp_labels)
         for batch_idx in range(batch_size):

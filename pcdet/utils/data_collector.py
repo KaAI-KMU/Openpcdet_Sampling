@@ -5,6 +5,8 @@ import copy
 from tqdm import tqdm
 
 from pathlib import Path
+import random
+
 
 from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from ..models import load_data_to_gpu
@@ -23,8 +25,17 @@ class DataCollector:
         
         self.root_path = dataloader.dataset.root_path
         self.class_names = np.array(dataloader.dataset.class_names)
-        imageset_file = self.root_path / 'ImageSets' / 'train.txt'
-        self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        if self.sampler_cfg['Dataset'] == 'KITTI':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+            self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_runtime.pkl'
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        elif self.sampler_cfg['Dataset'] == 'Waymo':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+            self.db_info_save_path = Path(self.root_path) / 'waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl'  
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            with open(imageset_file, 'r') as file:
+                self.labeled_mask = [line.strip() for line in file.readlines()]
         
     def sample_labels(self):
         self.clear_database()
@@ -33,12 +44,15 @@ class DataCollector:
         all_db_infos_gt = {}
         fp_pred_dict = {}  
         gt_pred_dict = {}  
+        sample_rate = 0.01
 
         for batch_dict in tqdm(self.dataloader, desc='labels_generating', leave=True):
+            if self.sampler_cfg['Dataset'] == 'Waymo':
+                if random.random() > sample_rate:
+                    continue
             batch_size = batch_dict['batch_size']
             load_data_to_gpu(batch_dict)
-            labeled_indices = [int(batch_dict['frame_id'][batch_idx]) in self.labeled_mask for batch_idx in range(batch_size)]
-
+            
             with torch.no_grad():
                 pred_dicts, _ = self.model(batch_dict)
 
@@ -65,9 +79,9 @@ class DataCollector:
                     'gt_labels': gt_boxes[:, -1].to(torch.int64),
                     'gt_scores' : max_ious_gt
                 }
-            #TODO: IoU 0일때 0.1이하면 0.1로 바꾸기 clip clamp
-            fp_label_dict = self.fp_data_collector.generate_single_db(fp_pred_dict, batch_dict, labeled_indices, all_db_infos_fp)
-            gt_label_dict = self.gt_data_collector.generate_single_db(gt_pred_dict, batch_dict, labeled_indices, all_db_infos_gt)
+
+            fp_label_dict = self.fp_data_collector.generate_single_db(fp_pred_dict, batch_dict, all_db_infos_fp)
+            gt_label_dict = self.gt_data_collector.generate_single_db(gt_pred_dict, batch_dict, all_db_infos_gt)
 
         self.fp_data_collector.save_db_infos(fp_label_dict)
         self.gt_data_collector.save_db_infos(gt_label_dict)

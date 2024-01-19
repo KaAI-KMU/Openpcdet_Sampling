@@ -8,31 +8,21 @@ DATA_CONFIG:
             - NAME: gt_sampling
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - kitti_dbinfos_train.pkl
+                  - kitti_dbinfos_score_train.pkl
+              BACKUP_DB_INFO:
+                DB_INFO_PATH: kitti_dbinfos_train.pkl
               PREPARE: {
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
               }
 
-              SAMPLE_GROUPS: ['Car:5','Pedestrian:5', 'Cyclist:7']
+              SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-
-            - NAME: fp_sampling 
-              USE_ROAD_PLANE: True
-              DB_INFO_PATH:
-                  - kitti_dbinfos_runtime.pkl
-              PREPARE: {
-                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
-                  filter_by_difficulty: [-1],
-              }
-              SAMPLE_GROUPS: ['Car:10','Pedestrian:5', 'Cyclist:7']
-              NUM_POINT_FEATURES: 4
-              DATABASE_WITH_FAKELIDAR: False
-              REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
-              LIMIT_WHOLE_SCENE: False
+              RATIO_SAMPLING_TYPE: 'uniform'
 
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']
@@ -43,11 +33,12 @@ DATA_CONFIG:
             - NAME: random_world_scaling
               WORLD_SCALE_RANGE: [0.95, 1.05]
 
-    FP_LABEL_GENERATING_CONFIG:
+    LABEL_GENERATING_CONFIG:
         CLS_THRESHOLD: [0.9, 0.9, 0.9]
         IOU_THRESHOLD: [0.9, 0.7, 0.7]
         INTERVAL: 5
         K : 0.5
+        Dataset : 'KITTI'        
 
 MODEL:
     NAME: PVRCNN
