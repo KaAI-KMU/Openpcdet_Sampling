@@ -27,6 +27,7 @@ def parse_config():
     parser.add_argument('--extra_tag', type=str, default='default', help='extra tag for this experiment')
     parser.add_argument('--ckpt', type=str, default=None, help='checkpoint to start from')
     parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained_model')
+
     parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm'], default='none')
     parser.add_argument('--tcp_port', type=int, default=18888, help='tcp port for distrbuted training')
     parser.add_argument('--local_rank', type=int, default=0, help='local rank for distributed training')
@@ -40,9 +41,9 @@ def parse_config():
     parser.add_argument('--ckpt_dir', type=str, default=None, help='specify a ckpt directory to be evaluated if needed')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
     parser.add_argument('--infer_time', action='store_true', default=False, help='calculate inference latency')
-    parser.add_argument('--visualizer', action='store_true', default=False, help='pcd visualize')
-    parser.add_argument('--score_threshold', type=float, default=0.7, help='visualize by score threshold')
-    parser.add_argument('--count_tpfpfn', action='store_true', default=False, help='count tp, fp, fn')
+
+    parser.add_argument('--stat_keys', nargs='+', default=['scores'], help='stat key for tp, fp')
+    parser.add_argument('--iou_thresholds', nargs='+', default=[0.5, 0.3, 0.3], help='iou thresholds for tp, fp for each class')
 
     args = parser.parse_args()
 
@@ -60,14 +61,14 @@ def parse_config():
 
 def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=False):
     # load checkpoint
-    model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test, 
+    model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test,
                                 pre_trained_path=args.pretrained_model)
     model.cuda()
-    
+
     # start evaluation
     eval_utils.eval_one_epoch(
-        cfg, args, model, test_loader, epoch_id, logger, dist_test=dist_test,
-        result_dir=eval_output_dir, count_tpfpfn=args.count_tpfpfn
+        cfg, args, model, test_loader, epoch_id, logger, dist_test=dist_test, 
+        result_dir=eval_output_dir
     )
 
 
@@ -89,7 +90,7 @@ def get_no_evaluated_ckpt(ckpt_dir, ckpt_record_file, args):
     return -1, None
 
 
-def repeat_eval_ckpt(model, test_loader, args, eval_output_dir, logger, ckpt_dir, dist_test=False):
+def repeat_eval_ckpt(model, test_loader, args, eval_output_dir, logger, ckpt_dir,dist_test=False):
     # evaluated ckpt record
     ckpt_record_file = eval_output_dir / ('eval_list_%s.txt' % cfg.DATA_CONFIG.DATA_SPLIT['test'])
     with open(ckpt_record_file, 'a'):
