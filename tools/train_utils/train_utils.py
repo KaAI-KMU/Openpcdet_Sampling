@@ -159,6 +159,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
     # use for disable data augmentation hook
     hook_config = cfg.get('HOOK', None) 
     augment_disable_flag = False
+    buffer = 0
 
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
         total_it_each_epoch = len(train_loader)
@@ -179,8 +180,9 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
                 collector.sample_labels()
                 if collector is not None:
-                    fp_sampler.update_db_infos()
-                    gt_sampler.update_db_infos()
+                    buffer += 1
+                    fp_sampler.update_db_infos(buffer)
+                    gt_sampler.update_db_infos(buffer)
                 
             # train one epoch
             if lr_warmup_scheduler is not None and cur_epoch < optim_cfg.WARMUP_EPOCH:

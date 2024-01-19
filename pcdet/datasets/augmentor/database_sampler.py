@@ -50,11 +50,12 @@ class DataBaseSampler(object):
                 dist.barrier()
             self.logger.info('GT database has been removed from shared memory')
             
-    def update_db_infos(self):
+    def update_db_infos(self, buffer=0):
         for class_name in self.class_names:
             self.db_infos[class_name] = []
 
         self.use_shared_memory = self.sampler_cfg.get('USE_SHARED_MEMORY', False)
+        self.buffer = buffer
 
         for db_info_path in self.sampler_cfg.DB_INFO_PATH:
             db_info_path = self.root_path.resolve() / db_info_path
@@ -189,7 +190,7 @@ class DataBaseSampler(object):
                 if np.all(np.array(self.scores[class_name])) == None:
                     weights = None
                 else:
-                    weights = self.calculate_weights_for_class(np.array(self.scores[class_name]))
+                    weights = self.calculate_weights_for_class(np.array(self.scores[class_name]), self.buffer)
             else:
                 raise NotImplementedError
 
@@ -204,15 +205,26 @@ class DataBaseSampler(object):
         sample_group['indices'] = indices
         return sampled_dict
     
-    def calculate_weights_for_class(self, class_scores, num_bins=10):
+    def calculate_weights_for_class(self, class_scores, buffer=0, num_bins=10):
         bins = np.linspace(0, 1, num_bins + 1)
         digitized = np.digitize(class_scores, bins)
-        bin_counts = np.bincount(digitized, minlength=num_bins+1)[1:]
-        weights = bin_counts
-        normalized_weights = weights / np.sum(weights) * num_bins
-        sample_weights = normalized_weights[digitized - 1] * 10
+        bin_counts = np.bincount(digitized, minlength=num_bins + 1)[1:]
+        
+        if buffer % 2 == 0:
+            adjusted_bin_counts = bin_counts + (np.max(bin_counts) - bin_counts) * buffer
+        else:
+            adjusted_bin_counts = bin_counts
+
+        sum_adjusted_counts = np.sum(adjusted_bin_counts)
+        
+        if sum_adjusted_counts == 0:
+            normalized_weights = np.ones(num_bins) / num_bins
+        else:
+            normalized_weights = adjusted_bin_counts / sum_adjusted_counts * num_bins
+        
+        sample_weights = normalized_weights[digitized - 1] * 100
         return sample_weights.astype(np.int32)
-    
+
     @staticmethod
     def put_boxes_on_road_planes(gt_boxes, road_planes, calib):
         """

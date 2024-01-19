@@ -50,8 +50,8 @@ def parse_config():
     parser.add_argument('--ckpt_save_time_interval', type=int, default=300, help='in terms of seconds')
     parser.add_argument('--wo_gpu_stat', action='store_true', help='')
     parser.add_argument('--use_amp', action='store_true', help='use mix precision training')
-    parser.add_argument('--visualizer', action='store_true', default=False, help='pcd visualize')
-    parser.add_argument('--score_threshold', type=float, default=0.7, help='visualize by score threshold')
+    
+    parser.add_argument('--iou_thresholds', nargs='+', default=[0.5, 0.3, 0.3], help='iou thresholds for tp, fp for each class')
 
     args = parser.parse_args()
 

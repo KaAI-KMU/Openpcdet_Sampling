@@ -17,6 +17,10 @@ class FPDataCollector:
     def __init__(self, sampler_cfg, model, dataloader):
         self.sampler_cfg = sampler_cfg
         self.interval = sampler_cfg['INTERVAL']
+        if sampler_cfg['REMOVE_THRESHOLD'] is not None:
+            self.remove_threshold = sampler_cfg['REMOVE_THRESHOLD']
+        else:
+            self.remove_threshold = 0.0
         self.model = model
         self.dataloader = dataloader
         self.root_path = dataloader.dataset.root_path
@@ -54,7 +58,13 @@ class FPDataCollector:
             fp_names = np.array(self.class_names[fp_labels[batch_idx]['pred_labels'].cpu().detach().numpy() - 1])
             iou_scores = fp_labels[batch_idx]['pred_scores'].cpu().detach().numpy()
             #cls_scores = fp_labels[batch_idx]['pred_cls_scores'].cpu().detach().numpy()
-
+            
+            valid_indices = iou_scores > self.remove_threshold
+            fp_boxes = fp_boxes[valid_indices]
+            fp_names = fp_names[valid_indices]
+            iou_scores = iou_scores[valid_indices]
+            
+            num_obj = len(fp_names) 
             bbox = np.zeros([num_obj, 4])
             difficulty = np.zeros_like(fp_names, dtype=np.int32)
 
