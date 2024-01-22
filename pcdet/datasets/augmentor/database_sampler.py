@@ -186,11 +186,16 @@ class DataBaseSampler(object):
                     weights = None
                 else:
                     weights = np.array(1 / np.array(self.scores[class_name]), dtype=np.int32) 
-            elif self.ratio_sampling_type == 'cb':
+            elif self.ratio_sampling_type == 'positive':
                 if np.all(np.array(self.scores[class_name])) == None:
                     weights = None
                 else:
-                    weights = self.calculate_weights_for_class(np.array(self.scores[class_name]), self.buffer)
+                    weights = self.calculate_weights(np.array(self.scores[class_name]), self.buffer, self.ratio_sampling_type)
+            elif self.ratio_sampling_type == 'negative':
+                if np.all(np.array(self.scores[class_name])) == None:
+                    weights = None
+                else:
+                    weights = self.calculate_weights(np.array(self.scores[class_name]), self.buffer, self.ratio_sampling_type)
             else:
                 raise NotImplementedError
 
@@ -205,25 +210,32 @@ class DataBaseSampler(object):
         sample_group['indices'] = indices
         return sampled_dict
     
-    def calculate_weights_for_class(self, class_scores, buffer=0, num_bins=10):
-        bins = np.linspace(0, 1, num_bins + 1)
-        digitized = np.digitize(class_scores, bins)
-        bin_counts = np.bincount(digitized, minlength=num_bins + 1)[1:]
+    def calculate_weights(self, class_scores, buffer=0, ratio_sampling_type=None):
+        weight = np.zeros_like(class_scores)
         
-        if buffer % 2 == 0:
-            adjusted_bin_counts = bin_counts + (np.max(bin_counts) - bin_counts) * buffer
-        else:
-            adjusted_bin_counts = bin_counts
+        if ratio_sampling_type == 'negative':
+            #curriculum learning 
+            if buffer <= self.sampler_cfg["EASY_SAMPLES"]:
+                weight[class_scores < self.sampler_cfg["EASY_THRESHOLD"]] = 1
+            elif (buffer > self.sampler_cfg["EASY_SAMPLES"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES"]):
+                weight[class_scores < self.sampler_cfg["HARD_THRESHOLD"]] = 1
+            elif buffer > self.sampler_cfg["HARD_SAMPLES"]:
+                weight[:] = 1
+            else:
+                raise NotImplementedError
 
-        sum_adjusted_counts = np.sum(adjusted_bin_counts)
-        
-        if sum_adjusted_counts == 0:
-            normalized_weights = np.ones(num_bins) / num_bins
+        elif ratio_sampling_type == 'positive':
+            if buffer <= self.sampler_cfg["EASY_SAMPLES"]:
+                weight[class_scores > self.sampler_cfg["EASY_THRESHOLD"]] = 1
+            elif (buffer > self.sampler_cfg["EASY_SAMPLES"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES"]):
+                weight[class_scores > self.sampler_cfg["HARD_THRESHOLD"]] = 1
+            elif buffer > self.sampler_cfg["HARD_SAMPLES"]:
+                weight[:] = 1
+            else:
+                raise NotImplementedError
         else:
-            normalized_weights = adjusted_bin_counts / sum_adjusted_counts * num_bins
-        
-        sample_weights = normalized_weights[digitized - 1] * 100
-        return sample_weights.astype(np.int32)
+            raise NotImplementedError
+        return weight.astype(np.int64)
 
     @staticmethod
     def put_boxes_on_road_planes(gt_boxes, road_planes, calib):

@@ -180,7 +180,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
                 collector.sample_labels()
                 if collector is not None:
-                    buffer += 1
+                    buffer = cur_epoch
                     fp_sampler.update_db_infos(buffer)
                     gt_sampler.update_db_infos(buffer)
                 
