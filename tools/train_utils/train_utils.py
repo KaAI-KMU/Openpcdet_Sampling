@@ -177,13 +177,15 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             if train_sampler is not None:
                 train_sampler.set_epoch(cur_epoch)
                 
-            if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
-                collector.sample_labels()
-                if collector is not None:
-                    buffer = cur_epoch
-                    fp_sampler.update_db_infos(buffer)
-                    gt_sampler.update_db_infos(buffer)
-                
+            if sampling_config is not None:
+                if 'INTERVAL' in sampling_config:
+                    if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
+                        collector.sample_labels()
+                        if collector is not None:
+                            buffer += 1
+                            fp_sampler.update_db_infos(buffer)
+                            gt_sampler.update_db_infos(buffer)
+        
             # train one epoch
             if lr_warmup_scheduler is not None and cur_epoch < optim_cfg.WARMUP_EPOCH:
                 cur_scheduler = lr_warmup_scheduler

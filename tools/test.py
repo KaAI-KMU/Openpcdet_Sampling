@@ -44,6 +44,7 @@ def parse_config():
 
     parser.add_argument('--stat_keys', nargs='+', default=['scores'], help='stat key for tp, fp')
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.5, 0.3, 0.3], help='iou thresholds for tp, fp for each class')
+    parser.add_argument('--stats_mode', action='store_true',default=False, help='')
 
     args = parser.parse_args()
 

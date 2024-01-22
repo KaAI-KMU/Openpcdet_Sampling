@@ -23,7 +23,7 @@ class DataBaseSampler(object):
         
         self.img_aug_type = sampler_cfg.get('IMG_AUG_TYPE', None)
         self.img_aug_iou_thresh = sampler_cfg.get('IMG_AUG_IOU_THRESH', 0.5)
-        self.ratio_sampling_type = sampler_cfg.get('RATIO_SAMPLING_TYPE', None)
+        self.ratio_sampling_type = sampler_cfg.get('RATIO_SAMPLING_TYPE', 'uniform')
 
         self.logger = logger
         self.db_infos = {}
@@ -81,7 +81,10 @@ class DataBaseSampler(object):
         self.limit_whole_scene = self.sampler_cfg.get('LIMIT_WHOLE_SCENE', False)
 
         if self.init and self.sampling_type == 'gt':
-            self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
+            if 'SAMPLE_GROUPS_INIT' in self.sampler_cfg:  
+                self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
+            else:
+                self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS  
         else:
             self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
             

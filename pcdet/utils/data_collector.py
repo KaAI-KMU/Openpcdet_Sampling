@@ -44,7 +44,7 @@ class DataCollector:
         all_db_infos_gt = {}
         fp_pred_dict = {}  
         gt_pred_dict = {}  
-        sample_rate = 0.01
+        sample_rate = 0.005
 
         for batch_dict in tqdm(self.dataloader, desc='labels_generating', leave=True):
             if self.sampler_cfg['Dataset'] == 'Waymo':
