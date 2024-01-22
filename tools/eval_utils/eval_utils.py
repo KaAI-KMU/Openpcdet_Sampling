@@ -4,12 +4,35 @@ import time
 import numpy as np
 import torch
 import tqdm
-import matplotlib.pyplot as plt
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
-from eval_utils.statistics_utils import Statistics
+from pcdet.ops.iou3d_nms.iou3d_nms_utils import boxes_iou3d_gpu
 
+def statistics(pred_boxes, pred_labels, gt_boxes, gt_labels, thresholds=np.array([0.7, 0.5, 0.5])):
+    if isinstance(pred_boxes, torch.Tensor):
+        pred_boxes = pred_boxes.cpu().numpy()
+    if isinstance(pred_labels, torch.Tensor):
+        pred_labels = pred_labels.cpu().numpy()
+    if isinstance(gt_boxes, torch.Tensor):
+        gt_boxes = gt_boxes.cpu().numpy()
+    if isinstance(gt_labels, torch.Tensor):
+        gt_labels = gt_labels.cpu().numpy()
+
+    num_classes = thresholds.shape[0]
+    tp = np.zeros(num_classes, dtype=np.int64)
+    fp = np.zeros(num_classes, dtype=np.int64)
+    fn = np.zeros(num_classes, dtype=np.int64)
+
+    for i in range(num_classes):
+        pred_boxes_i = pred_boxes[pred_labels == i+1]
+        gt_boxes_i = gt_boxes[gt_labels == i+1]
+        iou = boxes_iou3d_gpu(torch.from_numpy(pred_boxes_i).cuda(), torch.from_numpy(gt_boxes_i).cuda()).cpu().numpy()
+        tp[i] = np.sum(np.any(iou > thresholds[i], axis=1))
+        fp[i] = pred_boxes_i.shape[0] - tp[i]
+        fn[i] = gt_boxes_i.shape[0] - tp[i]
+
+    return tp, fp, fn
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):
     for cur_thresh in cfg.MODEL.POST_PROCESSING.RECALL_THRESH_LIST:
@@ -19,21 +42,14 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     min_thresh = cfg.MODEL.POST_PROCESSING.RECALL_THRESH_LIST[0]
     disp_dict['recall_%s' % str(min_thresh)] = \
         '(%d, %d) / %d' % (metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
-    
 
-def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, attacker=None, dist_test=False, result_dir=None):
+
+def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None, draw_scenes=False):
     result_dir.mkdir(parents=True, exist_ok=True)
 
     final_output_dir = result_dir / 'final_result' / 'data'
     if args.save_to_file:
         final_output_dir.mkdir(parents=True, exist_ok=True)
-    
-    stats = Statistics(iou_thresh=args.iou_thresholds,
-                        score_keys=args.stat_keys,
-                        class_names=dataloader.dataset.class_names,
-                        stat_dict_path=None,
-                        root_path=result_dir,
-                        extra_tag='')
 
     metric = {
         'gt_num': 0,
@@ -64,11 +80,9 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, attacker=None
     if cfg.LOCAL_RANK == 0:
         progress_bar = tqdm.tqdm(total=len(dataloader), leave=True, desc='eval', dynamic_ncols=True)
     start_time = time.time()
+
     for i, batch_dict in enumerate(dataloader):
         load_data_to_gpu(batch_dict)
-
-        if attacker is not None:
-            batch_dict = attacker(batch_dict)
 
         if getattr(args, 'infer_time', False):
             start_time = time.time()
@@ -76,7 +90,9 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, attacker=None
         with torch.no_grad():
             pred_dicts, ret_dict = model(batch_dict)
 
-        stats.update_stat_dict(batch_dict, pred_dicts)
+        if draw_scenes:
+            from visual_utils.open3d_vis_utils import draw_batch_scenes
+            draw_batch_scenes(batch_dict, pred_dicts)
 
         disp_dict = {}
 
@@ -147,12 +163,6 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, attacker=None
 
     logger.info('Result is saved to %s' % result_dir)
     logger.info('****************Evaluation done.*****************')
-
-    key_name = f'epoch_{epoch_id}'
-    stats.save_stat_dict(key_name=key_name)
-    stats.save_stats_visualization(key_name=key_name, show_image=False)
-    stats.export_csv(key_name=key_name)
-
     return ret_dict
 
 
