@@ -214,8 +214,15 @@ class DataBaseSampler(object):
         return sampled_dict
     
     def calculate_weights(self, class_scores, buffer=0, ratio_sampling_type=None):
-        weight = np.zeros_like(class_scores)
+        num_bins = 10
+        bins = np.linspace(0,1, num_bins+1)
+        digitized = np.digitize(class_scores, bins)
+        bin_counts = np.bincount(digitized, minlength=num_bins+1)[1:]
         
+        total_samples = np.sum(bin_counts)
+        bin_weights = total_samples / (bin_counts+1e-7)
+        
+        weight = np.zeros_like(class_scores)
         if ratio_sampling_type == 'negative':
             #curriculum learning 
             if buffer <= self.sampler_cfg["EASY_SAMPLES"]:
@@ -238,6 +245,10 @@ class DataBaseSampler(object):
                 raise NotImplementedError
         else:
             raise NotImplementedError
+        
+        for i in range(1, num_bins+1):
+            weight[digitized == i] *= bin_weights[i-1]
+            
         return weight.astype(np.int64)
 
     @staticmethod

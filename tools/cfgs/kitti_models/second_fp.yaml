@@ -17,12 +17,16 @@ DATA_CONFIG:
               }
 
               SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
-              SAMPLE_GROUPS: ['Car:12','Pedestrian:5', 'Cyclist:7']
+              SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'cb'
+              RATIO_SAMPLING_TYPE: 'positive'
+              EASY_SAMPLES : 10
+              HARD_SAMPLES : 40
+              EASY_THRESHOLD : 0.6
+              HARD_THRESHOLD : 0.2
 
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
@@ -32,13 +36,17 @@ DATA_CONFIG:
                   filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                   filter_by_difficulty: [-1],
               }
-              SAMPLE_GROUPS: ['Car:12','Pedestrian:5', 'Cyclist:7']
+              SAMPLE_GROUPS: ['Car:10','Pedestrian:10', 'Cyclist:10']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'cb'
-
+              RATIO_SAMPLING_TYPE: 'negative'
+              EASY_SAMPLES : 10
+              HARD_SAMPLES : 40
+              EASY_THRESHOLD : 0.2
+              HARD_THRESHOLD : 0.6
+              
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']
 
@@ -51,9 +59,9 @@ DATA_CONFIG:
     LABEL_GENERATING_CONFIG:
         CLS_THRESHOLD: [0.9, 0.9, 0.9]
         IOU_THRESHOLD: [0.9, 0.7, 0.7]
-        INTERVAL: 5
+        INTERVAL: 10
         K : 0.5
-        REMOVE_THRESHOLD: 0.2
+        REMOVE_THRESHOLD: 0.0
         Dataset : 'KITTI'
 
 MODEL:
