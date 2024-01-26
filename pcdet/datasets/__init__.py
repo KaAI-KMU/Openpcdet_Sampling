@@ -1,8 +1,8 @@
 import torch
 from functools import partial
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torch.utils.data import DistributedSampler as _DistributedSampler
-
+import numpy as np
 from pcdet.utils import common_utils
 
 from .dataset import DatasetTemplate
@@ -52,8 +52,8 @@ class DistributedSampler(_DistributedSampler):
 
 
 def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None, workers=4, seed=None,
-                     logger=None, training=True, merge_all_iters_to_one_epoch=False, total_epochs=0, disable_augmentation=False):
-
+                     logger=None, training=True, merge_all_iters_to_one_epoch=False, total_epochs=0, disable_augmentation=False, subset_waymo=None):
+    
     dataset = __all__[dataset_cfg.DATASET](
         dataset_cfg=dataset_cfg,
         class_names=class_names,
@@ -67,6 +67,19 @@ def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None,
         assert hasattr(dataset, 'merge_all_iters_to_one_epoch')
         dataset.merge_all_iters_to_one_epoch(merge=True, epochs=total_epochs)
 
+    if subset_waymo is not None:  
+        total_indices = list(range(len(dataset)))
+        sampled_indices = np.random.choice(total_indices, int(len(total_indices) * subset_waymo), replace=False)
+        
+        original_dataset = dataset
+        dataset = Subset(dataset, sampled_indices)
+        
+        for attr_name in dir(original_dataset):
+            if not attr_name.startswith("__") and hasattr(original_dataset, attr_name):
+                setattr(dataset, attr_name, getattr(original_dataset, attr_name))
+    else:
+        original_dataset = dataset            
+    
     if dist:
         if training:
             sampler = torch.utils.data.distributed.DistributedSampler(dataset)
@@ -75,10 +88,12 @@ def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None,
             sampler = DistributedSampler(dataset, world_size, rank, shuffle=False)
     else:
         sampler = None
+
     dataloader = DataLoader(
         dataset, batch_size=batch_size, pin_memory=True, num_workers=workers,
-        shuffle=(sampler is None) and training, collate_fn=dataset.collate_batch,
+        shuffle=(sampler is None) and training, collate_fn=original_dataset.collate_batch, 
         drop_last=False, sampler=sampler, timeout=0, worker_init_fn=partial(common_utils.worker_init_fn, seed=seed)
     )
-
     return dataset, dataloader, sampler
+
+

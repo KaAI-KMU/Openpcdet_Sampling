@@ -8,7 +8,6 @@ from pathlib import Path
 
 from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from ..models import load_data_to_gpu
-from ..datasets import build_dataloader
 from ..ops.iou3d_nms import iou3d_nms_utils
 
 
