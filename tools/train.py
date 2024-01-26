@@ -165,7 +165,14 @@ def main():
         sampling_config = cfg.DATA_CONFIG.LABEL_GENERATING_CONFIG
         if sampling_config is None:
             sampler = None
+            subset_waymo = None
         else:
+            sampling_ratio = sampling_config.get('sampling_ratio', None) 
+            if sampling_ratio is not None:
+                subset_waymo = sampling_ratio  
+            else:
+                subset_waymo = None  
+
             _, sample_dataloader,_ = build_dataloader(
                 dataset_cfg=cfg.DATA_CONFIG,
                 class_names=cfg.CLASS_NAMES,
@@ -176,7 +183,8 @@ def main():
                 merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
                 total_epochs=args.epochs,
                 seed=666 if args.fix_random_seed else None,
-                disable_augmentation=True
+                disable_augmentation=True,
+                subset_waymo=subset_waymo
             )
             sampler = data_collector.DataCollector(
                 sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader

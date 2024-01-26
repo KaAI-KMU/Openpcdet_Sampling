@@ -4,9 +4,9 @@ import pickle
 import copy
 from tqdm import tqdm
 
+import torch.distributed as dist
 from pathlib import Path
 import random
-import torch.distributed as dist
 
 from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from ..models import load_data_to_gpu
@@ -43,19 +43,14 @@ class DataCollector:
         all_db_infos_fp = {}
         all_db_infos_gt = {}
         fp_pred_dict = {}  
-        gt_pred_dict = {}  
-        sample_rate = 0.005
+        gt_pred_dict = {} 
 
         for batch_dict in tqdm(self.dataloader, desc='labels_generating', leave=True):
-            if self.sampler_cfg['Dataset'] == 'Waymo':
-                if random.random() > sample_rate:
-                    continue
             batch_size = batch_dict['batch_size']
             load_data_to_gpu(batch_dict)
-            
             with torch.no_grad():
                 pred_dicts, _ = self.model(batch_dict)
-
+            
             for batch_idx in range(batch_size):
                 pred_scores = pred_dicts[batch_idx]['pred_scores']
                 gt_boxes = batch_dict['gt_boxes'][batch_idx]
@@ -85,10 +80,10 @@ class DataCollector:
 
         self.fp_data_collector.save_db_infos(fp_label_dict)
         self.gt_data_collector.save_db_infos(gt_label_dict)
+        
+        if dist.is_available() and dist.is_initialized():
+            dist.barrier()
 
     def clear_database(self):
         self.fp_data_collector.clear_database()
         self.gt_data_collector.clear_database()
-        
-    if dist.is_available() and dist.is_initialized():
-        dist.barrier()
