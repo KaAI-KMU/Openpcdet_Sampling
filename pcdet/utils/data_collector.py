@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from pathlib import Path
 import random
-
+import torch.distributed as dist
 
 from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from ..models import load_data_to_gpu
@@ -89,3 +89,6 @@ class DataCollector:
     def clear_database(self):
         self.fp_data_collector.clear_database()
         self.gt_data_collector.clear_database()
+        
+    if dist.is_available() and dist.is_initialized():
+        dist.barrier()
