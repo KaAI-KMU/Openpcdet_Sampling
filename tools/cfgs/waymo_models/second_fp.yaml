@@ -18,7 +18,7 @@ DATA_CONFIG:
                  filter_by_difficulty: [-1],
               }
 
-              SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              SAMPLE_GROUPS_INIT: ['Car:15','Pedestrian:10', 'Cyclist:10']
               SAMPLE_GROUPS: ['Car:15','Pedestrian:5', 'Cyclist:10']
               NUM_POINT_FEATURES: 5
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]

@@ -119,7 +119,7 @@ class Statistics:
             fn = iou3d.max(axis=0) < iou_thresh_per_gt
 
             # calculate num_points_in_pred and num_points_in_gt
-            single_scene_points = batch_dict['points'][batch_dict['points'][:,0] == i][:, 1:-1]
+            single_scene_points = batch_dict['points'][batch_dict['points'][:,0] == i][:, 1:4]
             num_points_in_pred = np.zeros(pred_num, dtype=np.int32)
             num_points_in_gt = np.zeros(gt_num, dtype=np.int32)
             num_points_in_pred = points_in_boxes_cpu(single_scene_points.cpu(), pred_dicts[i]['pred_boxes'].cpu()).sum(axis=1)

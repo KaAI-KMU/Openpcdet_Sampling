@@ -8,8 +8,9 @@ from pathlib import Path
 
 from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from ..models import load_data_to_gpu
+from ..datasets import build_dataloader
 from ..ops.iou3d_nms import iou3d_nms_utils
-
+import torch.distributed as dist
 
 
 class FPDataCollector:
@@ -41,11 +42,20 @@ class FPDataCollector:
     
     def clear_database(self):
         import shutil
-        if self.database_save_path.exists():
-            shutil.rmtree(str(self.database_save_path))
-        self.database_save_path.mkdir(parents=False, exist_ok=False)
-        if self.db_info_save_path.exists():
-            self.db_info_save_path.unlink()
+        if dist.is_initialized():
+            if dist.get_rank() == 0:
+                if self.database_save_path.exists():
+                    shutil.rmtree(str(self.database_save_path))
+                self.database_save_path.mkdir(parents=False, exist_ok=False)
+                if self.db_info_save_path.exists():
+                    self.db_info_save_path.unlink()
+            dist.barrier()  
+        else:
+            if self.database_save_path.exists():
+                shutil.rmtree(str(self.database_save_path))
+            self.database_save_path.mkdir(parents=False, exist_ok=False)
+            if self.db_info_save_path.exists():
+                self.db_info_save_path.unlink()
 
     def generate_single_db(self, fp_labels, batch_dict, db_infos):
         batch_size = batch_dict['batch_size']

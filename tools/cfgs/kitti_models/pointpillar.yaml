@@ -34,8 +34,8 @@ DATA_CONFIG:
                  filter_by_difficulty: [-1],
               }
 
-              SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
-              SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              SAMPLE_GROUPS_INIT: ['Car:15','Pedestrian:15', 'Cyclist:15']
+              SAMPLE_GROUPS: ['Car:15','Pedestrian:15', 'Cyclist:15']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
@@ -50,13 +50,6 @@ DATA_CONFIG:
 
             - NAME: random_world_scaling
               WORLD_SCALE_RANGE: [0.95, 1.05]
-
-    LABEL_GENERATING_CONFIG:
-        CLS_THRESHOLD: [0.9, 0.9, 0.9]
-        IOU_THRESHOLD: [0.9, 0.7, 0.7]
-        INTERVAL: 5
-        K : 0.5
-        Dataset : 'KITTI'
 
 MODEL:
     NAME: PointPillar
