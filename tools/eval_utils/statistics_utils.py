@@ -95,9 +95,6 @@ class Statistics:
             pred_labels = pred_dicts[i]['pred_labels']
             gt_boxes = batch_dict['gt_boxes'][i]
 
-            if pred_boxes.shape[0] == 0:
-                continue
-
             # remove dummy gt boxes
             gt_boxes = gt_boxes[gt_boxes[:, -1] > 0]
             gt_num = gt_boxes.shape[0]
@@ -112,11 +109,15 @@ class Statistics:
                 iou_thresh_per_pred[j] = self.iou_thresh[int(pred_labels[j])-1]
 
             # calculate iou3d and tp, fp, fn by iou3d and class
-            iou3d = boxes_iou3d_gpu(pred_boxes, gt_boxes[:,:-1]).cpu().numpy()
-            class_matrix = np.equal(pred_labels.detach().cpu().numpy().reshape(-1,1), gt_boxes[:,-1].cpu().numpy().reshape(1,-1))
-            iou3d = iou3d * class_matrix
-            tp = iou3d.max(axis=1) >= iou_thresh_per_pred
-            fn = iou3d.max(axis=0) < iou_thresh_per_gt
+            if pred_num == 0:
+                tp = np.array([], dtype=np.bool_)
+                fn = np.ones(gt_boxes.shape[0], dtype=np.bool_)
+            else:
+                iou3d = boxes_iou3d_gpu(pred_boxes, gt_boxes[:,:-1]).cpu().numpy()
+                class_matrix = np.equal(pred_labels.detach().cpu().numpy().reshape(-1,1), gt_boxes[:,-1].cpu().numpy().reshape(1,-1))
+                iou3d = iou3d * class_matrix
+                tp = iou3d.max(axis=1) >= iou_thresh_per_pred
+                fn = iou3d.max(axis=0) < iou_thresh_per_gt
 
             # calculate num_points_in_pred and num_points_in_gt
             single_scene_points = batch_dict['points'][batch_dict['points'][:,0] == i][:, 1:4]
