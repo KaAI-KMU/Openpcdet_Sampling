@@ -33,7 +33,12 @@ class GTDataCollector:
             imageset_file = self.root_path / 'ImageSets' / 'train.txt'
             with open(imageset_file, 'r') as file:
                 self.labeled_mask = [line.strip() for line in file.readlines()]
-    
+        elif self.sampler_cfg['Dataset'] == 'ONCE':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime_train'
+            self.db_info_save_path = Path(self.root_path) / 'once_dbinfos_score_train.pkl'
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
+        
         self.class_names = np.array(self.class_names)
     
     def clear_database(self):
@@ -82,7 +87,7 @@ class GTDataCollector:
                 filepath = self.database_save_path / filename
                 if filepath.exists():
                     continue
-
+                
                 gt_points = points[point_indices[i] > 0]
                 gt_points[:, :3] -= gt_boxes[i, :3]
                 with open(filepath, 'w') as f:

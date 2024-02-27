@@ -25,18 +25,27 @@ class FPDataCollector:
         self.dataloader = dataloader
         self.root_path = dataloader.dataset.root_path
         self.class_names = dataloader.dataset.class_names
-
-        if self.sampler_cfg['Dataset'] == 'KITTI':
+        
+        self.dataset_type = self.sampler_cfg['Dataset']
+        if self.dataset_type == 'KITTI':
             self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
             self.db_info_save_path = Path(self.root_path) / 'kitti_dbinfos_runtime.pkl'
             imageset_file = self.root_path / 'ImageSets' / 'train.txt'
             self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
-        elif self.sampler_cfg['Dataset'] == 'Waymo':
-            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+        elif self.dataset_type == 'Waymo':
+            self.cnt_data = 0
+            self.sub_dir_num = 1
+            self.max_data_num = 1000000
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime' / ('sub_dir_' + str(self.sub_dir_num))
             self.db_info_save_path = Path(self.root_path) / 'waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl'  
             imageset_file = self.root_path / 'ImageSets' / 'train.txt'
             with open(imageset_file, 'r') as file:
                 self.labeled_mask = [line.strip() for line in file.readlines()]
+        elif self.dataset_type == 'ONCE':
+            self.database_save_path = Path(self.root_path) / 'gt_database_runtime'
+            self.db_info_save_path = Path(self.root_path) / 'once_dbinfos_runtime.pkl'
+            imageset_file = self.root_path / 'ImageSets' / 'train.txt'
+            self.labeled_mask = np.loadtxt(imageset_file, dtype=np.int32)
     
         self.class_names = np.array(self.class_names)
     
@@ -88,10 +97,19 @@ class FPDataCollector:
 
             for i in range(num_obj):
                 filename = '%s_%s_%d.bin' % (sample_idx, fp_names[i], i)
+                if self.dataset_type == 'Waymo':
+                    self.cnt_data += 1
+                    if self.cnt_data >= self.max_data_num:
+                        self.sub_dir_num += 1
+                        self.database_save_path = self.database_save_path.parent / ('sub_dir_' + str(self.sub_dir_num))
+                        if not self.database_save_path.exists():
+                            self.database_save_path.mkdir(parents=True, exist_ok=True)
+                        self.cnt_data = 0 
+                        
                 filepath = self.database_save_path / filename
                 if filepath.exists():
                     continue
-
+                
                 fp_points = points[point_indices[i] > 0]
                 fp_points[:, :3] -= fp_boxes[i, :3]
                 with open(filepath, 'w') as f:
