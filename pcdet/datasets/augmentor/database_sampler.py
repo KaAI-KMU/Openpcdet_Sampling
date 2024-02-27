@@ -176,31 +176,12 @@ class DataBaseSampler(object):
         """
         sample_num, pointer, indices = int(sample_group['sample_num']), sample_group['pointer'], sample_group['indices']
         if pointer >= len(self.db_infos[class_name]):
-            if self.ratio_sampling_type == 'uniform' or len(self.scores) == 0:
-                indices = np.arange(len(self.db_infos[class_name]))
+            if len(self.scores) == 0 or np.any(np.array(self.scores[class_name]) == None):
                 weights = None
-            elif self.ratio_sampling_type == 'x':
-                if np.all(np.array(self.scores[class_name])) == None:
-                    weights = None 
-                else:
-                    weights = np.array(np.array(self.scores[class_name]) * 10, dtype=np.int32)
-            elif self.ratio_sampling_type == '1/x':
-                if np.all(np.array(self.scores[class_name])) == None:
-                    weights = None
-                else:
-                    weights = np.array(1 / np.array(self.scores[class_name]), dtype=np.int32) 
-            elif self.ratio_sampling_type == 'positive':
-                if np.all(np.array(self.scores[class_name])) == None:
-                    weights = None
-                else:
-                    weights = self.calculate_weights(np.array(self.scores[class_name]), self.buffer, self.ratio_sampling_type)
-            elif self.ratio_sampling_type == 'negative':
-                if np.all(np.array(self.scores[class_name])) == None:
-                    weights = None
-                else:
-                    weights = self.calculate_weights(np.array(self.scores[class_name]), self.buffer, self.ratio_sampling_type)
             else:
-                raise NotImplementedError
+                weights = self.calculate_weights(
+                    np.array(self.scores[class_name]), buffer=self.buffer, ratio_sampling_type=self.ratio_sampling_type
+                )
 
             if weights is not None:
                 indices = np.repeat(np.arange(len(self.db_infos[class_name])), weights)
@@ -213,42 +194,37 @@ class DataBaseSampler(object):
         sample_group['indices'] = indices
         return sampled_dict
     
-    def calculate_weights(self, class_scores, buffer=0, ratio_sampling_type=None):
-        num_bins = 10
-        bins = np.linspace(0,1, num_bins+1)
-        digitized = np.digitize(class_scores, bins)
-        bin_counts = np.bincount(digitized, minlength=num_bins+1)[1:]
-        
-        total_samples = np.sum(bin_counts)
-        bin_weights = total_samples / (bin_counts+1e-7)
-        
+    def calculate_weights(self, class_scores, buffer=0, nbins=10, ratio_sampling_type=None):
         weight = np.zeros_like(class_scores)
-        if ratio_sampling_type == 'negative':
-            #curriculum learning 
-            if buffer <= self.sampler_cfg["EASY_SAMPLES"]:
-                weight[class_scores < self.sampler_cfg["EASY_THRESHOLD"]] = 1
-            elif (buffer > self.sampler_cfg["EASY_SAMPLES"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES"]):
-                weight[class_scores < self.sampler_cfg["HARD_THRESHOLD"]] = 1
-            elif buffer > self.sampler_cfg["HARD_SAMPLES"]:
-                weight[:] = 1
-            else:
-                raise NotImplementedError
 
-        elif ratio_sampling_type == 'positive':
-            if buffer <= self.sampler_cfg["EASY_SAMPLES"]:
-                weight[class_scores > self.sampler_cfg["EASY_THRESHOLD"]] = 1
-            elif (buffer > self.sampler_cfg["EASY_SAMPLES"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES"]):
-                weight[class_scores > self.sampler_cfg["HARD_THRESHOLD"]] = 1
-            elif buffer > self.sampler_cfg["HARD_SAMPLES"]:
-                weight[:] = 1
+        if 'curriculum' in ratio_sampling_type:
+            if buffer <= self.sampler_cfg["EASY_SAMPLES_EPOCH"]:
+                sampling_mask = class_scores < self.sampler_cfg["EASY_THRESHOLD"]
+            elif (buffer > self.sampler_cfg["EASY_SAMPLES_EPOCH"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES_EPOCH"]):
+                sampling_mask = class_scores < self.sampler_cfg["HARD_THRESHOLD"]
             else:
-                raise NotImplementedError
+                sampling_mask = np.ones_like(class_scores)
+        else:
+            sampling_mask = None
+        
+        if ratio_sampling_type == 'curriculum_positive':
+            weight[~sampling_mask] = 1
+        elif ratio_sampling_type == 'curriculum_negative':
+            weight[sampling_mask] = 1
+        elif ratio_sampling_type == 'uniform':
+            weight = np.ones_like(class_scores)
         else:
             raise NotImplementedError
         
-        for i in range(1, num_bins+1):
+        # perform uniform sampling for each interval
+        bins = np.linspace(0, 1, nbins + 1)
+        digitized = np.digitize(class_scores, bins)
+        bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
+        bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
+
+        for i in range(1, nbins+1):
             weight[digitized == i] *= bin_weights[i-1]
-            
+
         return weight.astype(np.int64)
 
     @staticmethod
