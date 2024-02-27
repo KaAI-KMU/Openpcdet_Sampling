@@ -159,7 +159,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
     # use for disable data augmentation hook
     hook_config = cfg.get('HOOK', None) 
     augment_disable_flag = False
-    buffer = 0
+    buffer = start_epoch
 
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
         total_it_each_epoch = len(train_loader)
