@@ -64,7 +64,6 @@ DATA_CONFIG:
         K : 0.5
         REMOVE_THRESHOLD: 0.0
         Dataset : 'Waymo'
-        sampling_ratio: 0.1
 
 MODEL:
     NAME: SECONDNet
