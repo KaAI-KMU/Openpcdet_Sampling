@@ -3,7 +3,7 @@ CLASS_NAMES: ['Car', 'Pedestrian', 'Cyclist']
 DATA_CONFIG: 
     _BASE_CONFIG_: cfgs/dataset_configs/kitti_dataset.yaml
     DATA_AUGMENTOR:
-        DISABLE_AUG_LIST: ['placeholder', 'fp_sampling']
+        DISABLE_AUG_LIST: ['placeholder']
         AUG_CONFIG_LIST:
             - NAME: gt_sampling
               USE_ROAD_PLANE: True
