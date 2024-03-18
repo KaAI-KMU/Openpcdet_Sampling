@@ -24,8 +24,8 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: True
               RATIO_SAMPLING_TYPE: 'curriculum_positive'
-              EASY_SAMPLES : 10
-              HARD_SAMPLES : 20
+              EASY_SAMPLES_EPOCH : 10
+              HARD_SAMPLES_EPOCH : 20
               EASY_THRESHOLD : 0.6
               HARD_THRESHOLD : 0.3
             
@@ -43,8 +43,8 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: True
               RATIO_SAMPLING_TYPE: 'curriculum_negative'
-              EASY_SAMPLES : 10
-              HARD_SAMPLES : 20
+              EASY_SAMPLES_EPOCH : 10
+              HARD_SAMPLES_EPOCH : 20
               EASY_THRESHOLD : 0.3
               HARD_THRESHOLD : 0.6
 
@@ -62,7 +62,7 @@ DATA_CONFIG:
         IOU_THRESHOLD: [0.9, 0.7, 0.7]
         INTERVAL: 5
         K : 0.5
-        REMOVE_THRESHOLD: 0.0
+        REMOVE_THRESHOLD: 0.3
         Dataset : 'Waymo'
 
 MODEL:
