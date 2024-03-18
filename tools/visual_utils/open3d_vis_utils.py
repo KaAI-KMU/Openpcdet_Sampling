@@ -16,7 +16,7 @@ box_colormap = [
 ]
 
     
-def draw_batch(batch_dict, pred_dicts, aug_pred_dicts=None, threshold=0.7):
+def draw_batch(batch_dict, pred_dicts, aug_pred_dicts=None, threshold=None):
     batch_points = batch_dict['points']
     
     for i in range(batch_dict['batch_size']):
@@ -26,8 +26,11 @@ def draw_batch(batch_dict, pred_dicts, aug_pred_dicts=None, threshold=0.7):
         points = batch_points[batch_points[:, 0] == i][:, 1:]
         if 'gt_boxes' in batch_dict:
             gt_boxes = batch_dict['gt_boxes'][i][:7]
-            
-        mask = pred_dicts[i]['pred_scores'] >= threshold
+        
+        if threshold is None:
+            mask = torch.ones(pred_dicts[i]['pred_scores'].shape[0], dtype=torch.bool)
+        else:
+            mask = pred_dicts[i]['pred_scores'] >= threshold
         ref_boxes = pred_dicts[i]['pred_boxes'][mask]
         ref_scores = pred_dicts[i]['pred_scores'][mask]
         ref_labels = pred_dicts[i]['pred_labels'][mask]

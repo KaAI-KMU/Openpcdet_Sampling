@@ -40,9 +40,9 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'positive'
-              EASY_SAMPLES : 10
-              HARD_SAMPLES : 40
+              RATIO_SAMPLING_TYPE: 'curriculum_positive'
+              EASY_SAMPLES_EPOCH : 10
+              HARD_SAMPLES_EPOCH : 40
               EASY_THRESHOLD : 0.6
               HARD_THRESHOLD : 0.3
 
@@ -59,9 +59,9 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'negative'
-              EASY_SAMPLES : 10
-              HARD_SAMPLES : 40
+              RATIO_SAMPLING_TYPE: 'curriculum_negative'
+              EASY_SAMPLES_EPOCH : 10
+              HARD_SAMPLES_EPOCH : 40
               EASY_THRESHOLD : 0.3
               HARD_THRESHOLD : 0.6
               

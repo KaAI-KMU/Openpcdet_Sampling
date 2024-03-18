@@ -44,7 +44,9 @@ def parse_config():
 
     parser.add_argument('--stat_keys', nargs='+', default=['scores'], help='stat key for tp, fp')
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.5, 0.3, 0.3], help='iou thresholds for tp, fp for each class')
-    parser.add_argument('--stats_mode', action='store_true',default=False, help='')
+    parser.add_argument('--stats_mode', action='store_true',default=True, help='')
+    parser.add_argument('--visualize', action='store_true', default=False, help='visualize the result')
+    parser.add_argument('--vis_thresh', type=float, default=0.3, help='visualization threshold')
 
     args = parser.parse_args()
 
@@ -60,7 +62,7 @@ def parse_config():
     return args, cfg
 
 
-def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=False):
+def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=False, visualize=False, vis_thresh=0.5):
     # load checkpoint
     model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test,
                                 pre_trained_path=args.pretrained_model)
@@ -69,7 +71,7 @@ def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id
     # start evaluation
     eval_utils.eval_one_epoch(
         cfg, args, model, test_loader, epoch_id, logger, dist_test=dist_test, 
-        result_dir=eval_output_dir
+        result_dir=eval_output_dir, visualize=visualize, vis_thresh=vis_thresh
     )
 
 
@@ -205,7 +207,8 @@ def main():
         if args.eval_all:
             repeat_eval_ckpt(model, test_loader, args, eval_output_dir, logger, ckpt_dir, dist_test=dist_test)
         else:
-            eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=dist_test)
+            eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=dist_test,
+                             visualize=args.visualize, vis_thresh=args.vis_thresh)
 
 
 if __name__ == '__main__':
