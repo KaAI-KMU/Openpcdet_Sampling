@@ -164,7 +164,7 @@ def main():
     if cfg.DATA_CONFIG.get('LABEL_GENERATING_CONFIG', None) is not None:
         sampling_config = cfg.DATA_CONFIG.LABEL_GENERATING_CONFIG
         if sampling_config is None:
-            sampler = None
+            collector = None
         else:
             _, sample_dataloader,_ = build_dataloader(
                 dataset_cfg=cfg.DATA_CONFIG,
@@ -178,14 +178,14 @@ def main():
                 seed=666 if args.fix_random_seed else None,
                 disable_augmentation=True
             )
-            sampler = data_collector.DataCollector(
-                sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader
+            collector = data_collector.DataCollector(
+                sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader, dist=dist_train
             )
             if start_epoch == 0:
-                sampler.clear_database()
+                collector.clear_database()
     else:
         sampling_config = None
-        sampler = None
+        collector = None
         
     model.train()  # before wrap to DistributedDataParallel to support fixed some parameters
     if dist_train:
@@ -217,7 +217,7 @@ def main():
         tb_log=tb_log,
         ckpt_save_dir=ckpt_dir,
         train_sampler=train_sampler,
-        collector = sampler,
+        collector = collector,
         lr_warmup_scheduler=lr_warmup_scheduler,
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,

@@ -250,6 +250,31 @@ def merge_results_dist(result_part, size, tmpdir):
     return ordered_results
 
 
+def merge_dict_dist(dict_part, tmpdir):
+    rank, world_size = get_dist_info()
+    os.makedirs(tmpdir, exist_ok=True)
+
+    dist.barrier()
+    pickle.dump(dict_part, open(os.path.join(tmpdir, 'dict_part_{}.pkl'.format(rank)), 'wb'))
+    dist.barrier()
+
+    if rank != 0:
+        return None
+
+    part_list = []
+    for i in range(world_size):
+        part_file = os.path.join(tmpdir, 'dict_part_{}.pkl'.format(i))
+        part_list.append(pickle.load(open(part_file, 'rb')))
+
+    merged_dict = {}
+    for k in part_list[0].keys():
+        merged_dict[k] = []
+        for part in part_list:
+            merged_dict[k].extend(part[k])
+    shutil.rmtree(tmpdir)
+    return merged_dict
+
+
 def scatter_point_inds(indices, point_inds, shape):
     ret = -1 * torch.ones(*shape, dtype=point_inds.dtype, device=point_inds.device)
     ndim = indices.shape[-1]
