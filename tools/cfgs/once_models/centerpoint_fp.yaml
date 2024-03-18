@@ -28,7 +28,7 @@ DATA_CONFIG:
               NUM_POINT_FEATURES: 4
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: True
-              RATIO_SAMPLING_TYPE: 'positive'
+              RATIO_SAMPLING_TYPE: 'curriculum_positive'
               EASY_SAMPLES_EPOCH : 10
               HARD_SAMPLES_EPOCH : 40
               EASY_THRESHOLD : 0.6
@@ -46,7 +46,7 @@ DATA_CONFIG:
               NUM_POINT_FEATURES: 4
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: True
-              RATIO_SAMPLING_TYPE: 'negative'
+              RATIO_SAMPLING_TYPE: 'curriculum_negative'
               EASY_SAMPLES_EPOCH : 10
               HARD_SAMPLES_EPOCH : 40
               EASY_THRESHOLD : 0.6
