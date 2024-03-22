@@ -7,64 +7,64 @@ DATA_CONFIG:
         DISABLE_AUG_LIST: ['placeholder']
         AUG_CONFIG_LIST:
             - NAME: gt_sampling
-            USE_ROAD_PLANE: False
-            DB_INFO_PATH:
-                - waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1.pkl
+                USE_ROAD_PLANE: False
+                DB_INFO_PATH:
+                    - waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1.pkl
 
-            USE_SHARED_MEMORY: False  # set it to True to speed up (it costs about 15GB shared memory)
-            DB_DATA_PATH:
-                - waymo_processed_data_v0_5_0_gt_database_train_sampled_1_global.npy
+                USE_SHARED_MEMORY: False  # set it to True to speed up (it costs about 15GB shared memory)
+                DB_DATA_PATH:
+                    - waymo_processed_data_v0_5_0_gt_database_train_sampled_1_global.npy
 
-            BACKUP_DB_INFO:
-                # if the above DB_INFO cannot be found, will use this backup one
-                DB_INFO_PATH: waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1_multiframe_-4_to_0.pkl
-                DB_DATA_PATH: waymo_processed_data_v0_5_0_gt_database_train_sampled_1_multiframe_-4_to_0_global.npy
-                NUM_POINT_FEATURES: 6
+                BACKUP_DB_INFO:
+                    # if the above DB_INFO cannot be found, will use this backup one
+                    DB_INFO_PATH: waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1_multiframe_-4_to_0.pkl
+                    DB_DATA_PATH: waymo_processed_data_v0_5_0_gt_database_train_sampled_1_multiframe_-4_to_0_global.npy
+                    NUM_POINT_FEATURES: 6
 
-            PREPARE: {
-                filter_by_min_points: ['Vehicle:5', 'Pedestrian:5', 'Cyclist:5'],
-                filter_by_difficulty: [-1],
-            }
+                PREPARE: {
+                    filter_by_min_points: ['Vehicle:5', 'Pedestrian:5', 'Cyclist:5'],
+                    filter_by_difficulty: [-1],
+                }
 
-            SAMPLE_GROUPS: ['Vehicle:15', 'Pedestrian:10', 'Cyclist:10']
-            SAMPLE_GROUPS_INIT: ['Vehicle:15', 'Pedestrian:10', 'Cyclist:10']
-            NUM_POINT_FEATURES: 5
-            REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
-            LIMIT_WHOLE_SCENE: True
+                SAMPLE_GROUPS: ['Vehicle:15', 'Pedestrian:10', 'Cyclist:10']
+                SAMPLE_GROUPS_INIT: ['Vehicle:15', 'Pedestrian:10', 'Cyclist:10']
+                NUM_POINT_FEATURES: 5
+                REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+                LIMIT_WHOLE_SCENE: True
 
-            RATIO_SAMPLING_TYPE: 'curriculum_positive'
-            EASY_SAMPLES_EPOCH : 10
-            HARD_SAMPLES_EPOCH : 20
-            EASY_THRESHOLD : 0.7
-            HARD_THRESHOLD : 0.3
+                RATIO_SAMPLING_TYPE: 'curriculum_positive'
+                EASY_SAMPLES_EPOCH : 10
+                HARD_SAMPLES_EPOCH : 20
+                EASY_THRESHOLD : 0.7
+                HARD_THRESHOLD : 0.3
 
             - NAME: fp_sampling 
-              USE_ROAD_PLANE: False
-              DB_INFO_PATH:
-                  - waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl
-              USE_SHARED_MEMORY: False
-              PREPARE: {
-                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
-                  filter_by_difficulty: [-1],
-              }
-              SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
-              NUM_POINT_FEATURES: 5
-              REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
-              LIMIT_WHOLE_SCENE: True
-              RATIO_SAMPLING_TYPE: 'curriculum_negative'
-              EASY_SAMPLES_EPOCH : 10
-              HARD_SAMPLES_EPOCH : 20
-              EASY_THRESHOLD : 0.3
-              HARD_THRESHOLD : 0.7
+                USE_ROAD_PLANE: False
+                DB_INFO_PATH:
+                    - waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl
+                USE_SHARED_MEMORY: False
+                PREPARE: {
+                    filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+                    filter_by_difficulty: [-1],
+                }
+                SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
+                NUM_POINT_FEATURES: 5
+                REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+                LIMIT_WHOLE_SCENE: True
+                RATIO_SAMPLING_TYPE: 'curriculum_negative'
+                EASY_SAMPLES_EPOCH : 10
+                HARD_SAMPLES_EPOCH : 20
+                EASY_THRESHOLD : 0.3
+                HARD_THRESHOLD : 0.7
 
             - NAME: random_world_flip
-              ALONG_AXIS_LIST: ['x', 'y']
+                ALONG_AXIS_LIST: ['x', 'y']
 
             - NAME: random_world_rotation
-              WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
+                WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
 
             - NAME: random_world_scaling
-              WORLD_SCALE_RANGE: [0.95, 1.05]
+                WORLD_SCALE_RANGE: [0.95, 1.05]
 
 MODEL:
     NAME: CenterPoint
