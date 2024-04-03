@@ -101,11 +101,11 @@ class DataBaseSampler(object):
             
         self.scores = {}  
         for class_name in self.class_names:
-            class_scores = [] 
+            pred_scores = [] 
             for db_info in self.db_infos[class_name]:
-                iou_score = db_info.get('iou_score')
-                class_scores.append(iou_score)
-            self.scores[class_name] = class_scores  
+                pred_score = db_info.get('pred_score')
+                pred_scores.append(pred_score)
+            self.scores[class_name] = pred_scores  
 
         self.init = False
             

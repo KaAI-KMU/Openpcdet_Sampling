@@ -86,7 +86,7 @@ class Statistics:
             self.visualizer.save_histogram(tp_counts, fp_counts, show_image=show_image, key_name=k)
 
         if 'scores' in self.score_keys and 'cls_scores' in self.score_keys:
-            self.visualizer.save_scatter(self.stat_dict, show_image=show_image, key_name=key_name)
+            self.visualizer.save_scatter(self.stat_dict, show_image=show_image)
 
     def update_stat_dict(self, batch_dict, pred_dicts):
         batch_size = batch_dict['batch_size']

@@ -31,7 +31,7 @@ class DatasetTemplate(torch_data.Dataset):
         )
         self.data_augmentor = DataAugmentor(
             self.root_path, self.dataset_cfg.DATA_AUGMENTOR, self.class_names, logger=self.logger
-        ) if self.training else None
+        ) if self.training or not self.disable_augmentation else None
         self.data_processor = DataProcessor(
             self.dataset_cfg.DATA_PROCESSOR, point_cloud_range=self.point_cloud_range,
             training=self.training, num_point_features=self.point_feature_encoder.num_point_features
@@ -50,6 +50,21 @@ class DatasetTemplate(torch_data.Dataset):
     @property
     def mode(self):
         return 'train' if self.training else 'test'
+    
+    def get_sampler(self, key='gt_sampling'):
+        if self.data_augmentor is None:
+            return None
+        for name, augmentor in zip(self.data_augmentor.data_augmentor_names, self.data_augmentor.data_augmentor_queue):
+            if name == key:
+                return augmentor
+    
+    @property
+    def fp_sampler(self):
+        return self.get_sampler('fp_sampling')
+
+    @property
+    def gt_sampler(self):
+        return self.get_sampler('gt_sampling')
 
     def __getstate__(self):
         d = dict(self.__dict__)
