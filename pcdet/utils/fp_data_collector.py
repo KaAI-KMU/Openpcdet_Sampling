@@ -79,13 +79,14 @@ class FPDataCollector:
             points_indices = batch_dict['points'][:, 0] == batch_idx
             points = batch_dict['points'][points_indices][:, 1:].cpu().detach().numpy()
             fp_names = np.array(self.class_names[fp_labels[batch_idx]['pred_labels'].cpu().detach().numpy() - 1])
-            iou_scores = fp_labels[batch_idx]['pred_scores'].cpu().detach().numpy()
+
+            cls_scores = fp_labels[batch_idx].get('pred_cls_scores', fp_labels[batch_idx]['pred_scores']).cpu().detach().numpy()
             #cls_scores = fp_labels[batch_idx]['pred_cls_scores'].cpu().detach().numpy()
             
-            valid_indices = iou_scores > self.remove_threshold
+            valid_indices = cls_scores > self.remove_threshold
             fp_boxes = fp_boxes[valid_indices]
             fp_names = fp_names[valid_indices]
-            iou_scores = iou_scores[valid_indices]
+            cls_scores = cls_scores[valid_indices]
             
             num_obj = len(fp_names) 
             bbox = np.zeros([num_obj, 4])
@@ -119,7 +120,7 @@ class FPDataCollector:
                 db_info = {'name': fp_names[i], 'path': db_path, 'image_idx': sample_idx, 'gt_idx': i,
                            'box3d_lidar': fp_boxes[i], 'num_points_in_gt': fp_points.shape[0],
                         'difficulty': difficulty[i], 'bbox': bbox[i], 'score': -1.0,
-                        'iou_score': iou_scores[i], 'cls_score': -1.0}
+                        'cls_score': cls_scores[i], 'cls_score': -1.0}
                 if fp_names[i] in db_infos:
                     db_infos[fp_names[i]].append(db_info)
                 else:

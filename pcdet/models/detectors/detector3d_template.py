@@ -252,6 +252,8 @@ class Detector3DTemplate(nn.Module):
                 if batch_dict.get('has_class_labels', False):
                     label_key = 'roi_labels' if 'roi_labels' in batch_dict else 'batch_pred_labels'
                     label_preds = batch_dict[label_key][index]
+                    if not self.training:
+                        roi_score = batch_dict['roi_scores'][index]                    
                 else:
                     label_preds = label_preds + 1 
                 selected, selected_scores = model_nms_utils.class_agnostic_nms(
@@ -267,6 +269,8 @@ class Detector3DTemplate(nn.Module):
                 final_scores = selected_scores
                 final_labels = label_preds[selected]
                 final_boxes = box_preds[selected]
+                if not self.training:
+                    final_cls_scores = torch.sigmoid(roi_score[selected])                
                     
             recall_dict = self.generate_recall_record(
                 box_preds=final_boxes if 'rois' not in batch_dict else src_box_preds,
@@ -279,6 +283,9 @@ class Detector3DTemplate(nn.Module):
                 'pred_scores': final_scores,
                 'pred_labels': final_labels
             }
+            if not self.training:
+                record_dict['pred_cls_scores'] = final_cls_scores
+
             pred_dicts.append(record_dict)
 
         return pred_dicts, recall_dict
