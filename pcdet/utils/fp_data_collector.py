@@ -21,6 +21,17 @@ class FPDataCollector:
             self.remove_threshold = sampler_cfg['REMOVE_THRESHOLD']
         else:
             self.remove_threshold = 0.0
+            
+        score_key = sampler_cfg.get('score_key', None)
+        if score_key is None:
+            score_key = 'pred_scores'
+        elif score_key == 'cls':
+            score_key = 'pred_cls_scores'
+        elif score_key == 'iou':
+            score_key = 'pred_scores'
+        else:
+            raise NotImplementedError
+
         self.model = model
         self.dataloader = dataloader
         self.root_path = dataloader.dataset.root_path
@@ -80,13 +91,12 @@ class FPDataCollector:
             points = batch_dict['points'][points_indices][:, 1:].cpu().detach().numpy()
             fp_names = np.array(self.class_names[fp_labels[batch_idx]['pred_labels'].cpu().detach().numpy() - 1])
 
-            cls_scores = fp_labels[batch_idx].get('pred_cls_scores', fp_labels[batch_idx]['pred_scores']).cpu().detach().numpy()
-            #cls_scores = fp_labels[batch_idx]['pred_cls_scores'].cpu().detach().numpy()
+            scores = fp_labels[batch_idx][self.score_key].cpu().detach().numpy()
             
-            valid_indices = cls_scores > self.remove_threshold
+            valid_indices = scores > self.remove_threshold
             fp_boxes = fp_boxes[valid_indices]
             fp_names = fp_names[valid_indices]
-            cls_scores = cls_scores[valid_indices]
+            scores = scores[valid_indices]
             
             num_obj = len(fp_names) 
             bbox = np.zeros([num_obj, 4])
@@ -120,7 +130,7 @@ class FPDataCollector:
                 db_info = {'name': fp_names[i], 'path': db_path, 'image_idx': sample_idx, 'gt_idx': i,
                            'box3d_lidar': fp_boxes[i], 'num_points_in_gt': fp_points.shape[0],
                         'difficulty': difficulty[i], 'bbox': bbox[i], 'score': -1.0,
-                        'cls_score': cls_scores[i], 'cls_score': -1.0}
+                        'pred_score': scores[i], 'cls_score': -1.0}
                 if fp_names[i] in db_infos:
                     db_infos[fp_names[i]].append(db_info)
                 else:

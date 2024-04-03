@@ -178,8 +178,9 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 train_sampler.set_epoch(cur_epoch)
                 
             if sampling_config is not None:
+                stop_sampling_flag = cur_epoch <= sampling_config.get('STOP_GENERATING_EPOCH', cur_epoch+1)
                 if 'INTERVAL' in sampling_config:
-                    if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
+                    if (cur_epoch + 1) % sampling_config.INTERVAL == 0 and stop_sampling_flag:
                         collector.sample_labels()
                         if collector is not None:
                             buffer += 1

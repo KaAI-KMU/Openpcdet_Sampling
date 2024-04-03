@@ -72,7 +72,6 @@ class GTDataCollector:
             points = batch_dict['points'][points_indices][:, 1:].cpu().detach().numpy()
             gt_names = np.array(self.class_names[gt_labels[batch_idx]['gt_labels'].cpu().detach().numpy() - 1])
             iou_scores = gt_labels[batch_idx]['gt_scores']
-            #cls_scores = gt_labels[batch_idx]['pred_cls_scores'].cpu().detach().numpy()
             iou_scores = np.where(iou_scores < 0.1, 0.1, iou_scores)
 
             bbox = np.zeros([num_obj, 4])
@@ -97,7 +96,7 @@ class GTDataCollector:
                 db_info = {'name': gt_names[i], 'path': db_path, 'image_idx': sample_idx, 'gt_idx': i,
                            'box3d_lidar': gt_boxes[i], 'num_points_in_gt': gt_points.shape[0],
                         'difficulty': difficulty[i], 'bbox': bbox[i], 'score': -1.0,
-                        'iou_score': iou_scores[i], 'cls_score': -1.0}
+                        'pred_score': iou_scores[i], 'cls_score': -1.0}
                 if gt_names[i] in db_infos:
                     db_infos[gt_names[i]].append(db_info)
                 else:
