@@ -17,18 +17,15 @@ class FPDataCollector:
     def __init__(self, sampler_cfg, model, dataloader):
         self.sampler_cfg = sampler_cfg
         self.interval = sampler_cfg['INTERVAL']
-        if sampler_cfg['REMOVE_THRESHOLD'] is not None:
-            self.remove_threshold = sampler_cfg['REMOVE_THRESHOLD']
-        else:
-            self.remove_threshold = 0.0
+        self.remove_threshold = sampler_cfg['REMOVE_THRESHOLD']
             
         score_key = sampler_cfg.get('score_key', None)
         if score_key is None:
-            score_key = 'pred_scores'
+            self.score_key = 'pred_scores'
         elif score_key == 'cls':
-            score_key = 'pred_cls_scores'
+            self.score_key = 'pred_cls_scores'
         elif score_key == 'iou':
-            score_key = 'pred_scores'
+            self.score_key = 'pred_scores'
         else:
             raise NotImplementedError
 
