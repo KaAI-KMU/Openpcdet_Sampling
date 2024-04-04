@@ -184,7 +184,6 @@ def main():
             )
             if start_epoch == 0:
                 collector.clear_database()
-                model.dataset.fp_sampler.update_db_infos()
     else:
         sampling_config = None
         collector = None
