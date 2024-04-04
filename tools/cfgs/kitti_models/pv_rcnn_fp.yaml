@@ -62,7 +62,7 @@ DATA_CONFIG:
         INTERVAL: 5
         SCORE_KEY: 'iou'
         K : 0.5
-        REMOVE_THRESHOLD: 0.2
+        REMOVE_THRESHOLD: 0.0
         Dataset : 'KITTI'
 
 MODEL:
