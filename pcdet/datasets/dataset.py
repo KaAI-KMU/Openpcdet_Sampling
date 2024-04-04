@@ -50,21 +50,6 @@ class DatasetTemplate(torch_data.Dataset):
     @property
     def mode(self):
         return 'train' if self.training else 'test'
-    
-    def get_sampler(self, key='gt_sampling'):
-        if self.data_augmentor is None:
-            return None
-        for name, augmentor in zip(self.data_augmentor.data_augmentor_names, self.data_augmentor.data_augmentor_queue):
-            if name == key:
-                return augmentor
-    
-    @property
-    def fp_sampler(self):
-        return self.get_sampler('fp_sampling')
-
-    @property
-    def gt_sampler(self):
-        return self.get_sampler('gt_sampling')
 
     def __getstate__(self):
         d = dict(self.__dict__)
