@@ -8,7 +8,7 @@ DATA_CONFIG:
             - NAME: gt_sampling
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - kitti_dbinfos_score_train.pkl
+                  - KittiDataset_gt_dbinfos_runtime.pkl
               BACKUP_DB_INFO:
                 DB_INFO_PATH: kitti_dbinfos_train.pkl
               PREPARE: {
@@ -31,7 +31,7 @@ DATA_CONFIG:
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - kitti_dbinfos_runtime.pkl
+                  - KittiDataset_fp_dbinfos_runtime.pkl
               PREPARE: {
                   filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                   filter_by_difficulty: [-1],
@@ -61,9 +61,7 @@ DATA_CONFIG:
         IOU_THRESHOLD: [0.9, 0.7, 0.7]
         INTERVAL: 5
         SCORE_KEY: 'iou'
-        K : 0.5
         REMOVE_THRESHOLD: 0.0
-        Dataset : 'KITTI'
 
 MODEL:
     NAME: PVRCNN

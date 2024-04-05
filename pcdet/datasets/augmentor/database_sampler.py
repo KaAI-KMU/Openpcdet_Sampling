@@ -60,7 +60,7 @@ class DataBaseSampler(object):
         for db_info_path in self.sampler_cfg.DB_INFO_PATH:
             db_info_path = self.root_path.resolve() / db_info_path
             if not db_info_path.exists():
-                if 'runtime' in str(db_info_path):
+                if 'fp' in str(db_info_path):
                     continue
                 assert len(self.sampler_cfg.DB_INFO_PATH) == 1
                 self.sampler_cfg.DB_INFO_PATH[0] = self.sampler_cfg.BACKUP_DB_INFO['DB_INFO_PATH']

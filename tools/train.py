@@ -162,30 +162,26 @@ def main():
                 except:
                     ckpt_list = ckpt_list[:-1]
                           
-    if cfg.DATA_CONFIG.get('LABEL_GENERATING_CONFIG', None) is not None:
-        sampling_config = cfg.DATA_CONFIG.LABEL_GENERATING_CONFIG
-        if sampling_config is None:
-            collector = None
-        else:
-            _, sample_dataloader,_ = build_dataloader(
-                dataset_cfg=cfg.DATA_CONFIG,
-                class_names=cfg.CLASS_NAMES,
-                batch_size=args.batch_size,
-                dist=dist_train, workers=args.workers,
-                logger=logger,
-                training=True,
-                merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
-                total_epochs=args.epochs,
-                seed=666 if args.fix_random_seed else None,
-                disable_augmentation=True
-            )
-            collector = data_collector.DataCollector(
-                sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader, dist=dist_train
-            )
-            if start_epoch == 0:
-                collector.clear_database()
+    sampling_config = cfg.DATA_CONFIG.get('LABEL_GENERATING_CONFIG', None)
+    if sampling_config is not None:
+        _, sample_dataloader,_ = build_dataloader(
+            dataset_cfg=cfg.DATA_CONFIG,
+            class_names=cfg.CLASS_NAMES,
+            batch_size=args.batch_size,
+            dist=dist_train, workers=args.workers,
+            logger=logger,
+            training=True,
+            merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
+            total_epochs=args.epochs,
+            seed=666 if args.fix_random_seed else None,
+            disable_augmentation=True
+        )
+        collector = data_collector.DataCollector(
+            sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader, use_dist=dist_train
+        )
+        if start_epoch == 0:
+            collector.clear_database()
     else:
-        sampling_config = None
         collector = None
         
     model.train()  # before wrap to DistributedDataParallel to support fixed some parameters

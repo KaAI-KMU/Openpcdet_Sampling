@@ -168,26 +168,23 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             train_loader.dataset.merge_all_iters_to_one_epoch(merge=True, epochs=total_epochs)
             total_it_each_epoch = len(train_loader) // max(total_epochs, 1)
 
-        if collector is not None:
+        if sampling_config is not None:
             fp_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='fp_sampling')
             gt_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='gt_sampling')
 
         dataloader_iter = iter(train_loader)
         for cur_epoch in tbar:
+            if sampling_config is not None:
+                if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
+                    collector.sample_labels()
+                    if fp_sampler is not None:
+                        fp_sampler.update_db_infos(buffer)
+                    if gt_sampler is not None:
+                        gt_sampler.update_db_infos(buffer)
+                    buffer += 1
+
             if train_sampler is not None:
                 train_sampler.set_epoch(cur_epoch)
-                
-            if sampling_config is not None:
-                stop_sampling_flag = cur_epoch <= sampling_config.get('STOP_GENERATING_EPOCH', cur_epoch+1)
-                if 'INTERVAL' in sampling_config:
-                    if (cur_epoch + 1) % sampling_config.INTERVAL == 0 and stop_sampling_flag:
-                        collector.sample_labels()
-                        if collector is not None:
-                            buffer += 1
-                            if fp_sampler is not None:
-                                fp_sampler.update_db_infos(buffer)
-                            if gt_sampler is not None:
-                                gt_sampler.update_db_infos(buffer)
         
             # train one epoch
             if lr_warmup_scheduler is not None and cur_epoch < optim_cfg.WARMUP_EPOCH:

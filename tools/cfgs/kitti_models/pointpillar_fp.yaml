@@ -26,7 +26,7 @@ DATA_CONFIG:
             - NAME: gt_sampling
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - kitti_dbinfos_score_train.pkl
+                  - KittiDataset_gt_dbinfos_runtime.pkl
               BACKUP_DB_INFO:
                 DB_INFO_PATH: kitti_dbinfos_train.pkl
               PREPARE: {
@@ -49,7 +49,7 @@ DATA_CONFIG:
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - kitti_dbinfos_runtime.pkl
+                  - KittiDataset_fp_dbinfos_runtime.pkl
               PREPARE: {
                   filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                   filter_by_difficulty: [-1],

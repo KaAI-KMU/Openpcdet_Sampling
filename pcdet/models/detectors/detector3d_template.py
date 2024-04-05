@@ -247,15 +247,16 @@ class Detector3DTemplate(nn.Module):
                 final_scores = torch.cat(pred_scores, dim=0)
                 final_labels = torch.cat(pred_labels, dim=0)
                 final_boxes = torch.cat(pred_boxes, dim=0)
+                final_cls_scores = None # Not implemented for multi-class NMS
             else:
                 cls_preds, label_preds = torch.max(cls_preds, dim=-1)
                 if batch_dict.get('has_class_labels', False):
                     label_key = 'roi_labels' if 'roi_labels' in batch_dict else 'batch_pred_labels'
                     label_preds = batch_dict[label_key][index]
-                    if not self.training:
-                        roi_score = batch_dict['roi_scores'][index]                    
+                    roi_score = batch_dict['roi_scores'][index]                    
                 else:
                     label_preds = label_preds + 1 
+                    roi_score = None
                 selected, selected_scores = model_nms_utils.class_agnostic_nms(
                     box_scores=cls_preds, box_preds=box_preds,
                     nms_config=post_process_cfg.NMS_CONFIG,
@@ -269,8 +270,10 @@ class Detector3DTemplate(nn.Module):
                 final_scores = selected_scores
                 final_labels = label_preds[selected]
                 final_boxes = box_preds[selected]
-                if not self.training:
-                    final_cls_scores = torch.sigmoid(roi_score[selected])                
+                if roi_score is not None:
+                    final_cls_scores = torch.sigmoid(roi_score[selected])
+                else:
+                    final_cls_scores = final_scores
                     
             recall_dict = self.generate_recall_record(
                 box_preds=final_boxes if 'rois' not in batch_dict else src_box_preds,
@@ -283,7 +286,7 @@ class Detector3DTemplate(nn.Module):
                 'pred_scores': final_scores,
                 'pred_labels': final_labels
             }
-            if not self.training:
+            if not self.training and final_cls_scores is not None:
                 record_dict['pred_cls_scores'] = final_cls_scores
 
             pred_dicts.append(record_dict)

@@ -27,7 +27,7 @@ DATA_CONFIG:
             - NAME: gt_sampling
               USE_ROAD_PLANE: False
               DB_INFO_PATH: 
-                  - waymo_processed_data_v0_5_0_waymo_dbinfos_score_train_sampled_1.pkl
+                  - WaymoDataset_gt_dbinfos_runtime.pkl
               USE_SHARED_MEMORY: False
               BACKUP_DB_INFO:
                   DB_INFO_PATH: waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1.pkl
@@ -52,7 +52,7 @@ DATA_CONFIG:
             - NAME: fp_sampling 
               USE_ROAD_PLANE: False
               DB_INFO_PATH:
-                  - waymo_processed_data_v0_5_0_waymo_dbinfos_runtime_sampled_1.pkl
+                  - WaymoDataset_fp_dbinfos_runtime.pkl
               USE_SHARED_MEMORY: False
               PREPARE: {
                   filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
