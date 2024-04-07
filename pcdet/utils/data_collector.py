@@ -40,13 +40,11 @@ class DataCollector:
         else:
             rank = 0
 
-        self.model.eval()
-
-        if rank == 0:
-            progress_bar = tqdm(total=len(self.dataloader), desc='labels_generating', leave=True)
-
         fp_db_infos = {}
         gt_db_infos = {}
+        self.model.eval()
+        if rank == 0:
+            progress_bar = tqdm(total=len(self.dataloader), desc='labels_generating', leave=True)
         for i, batch_dict in enumerate(self.dataloader):
             batch_size = batch_dict['batch_size']
             load_data_to_gpu(batch_dict)
@@ -61,6 +59,8 @@ class DataCollector:
                 pred_boxes = pred_dicts[batch_idx]['pred_boxes']
                 pred_classes = pred_dicts[batch_idx]['pred_labels']
                 if pred_boxes.shape[0] == 0:
+                    fp_pred_dict_list.append(None)
+                    gt_pred_dict_list.append(None)
                     continue
                 
                 iou3d = iou3d_nms_utils.boxes_iou3d_gpu(pred_boxes, gt_boxes[:,:-1])
@@ -102,12 +102,3 @@ class DataCollector:
     def clear_database(self):
         self.fp_data_collector.clear_database(self.use_dist)
         self.gt_data_collector.clear_database(self.use_dist)
-    
-    @staticmethod
-    def static_clear_database(root_path, dataset_type, use_dist=False):
-        if use_dist:
-            GTDataCollector.static_clear_database_dist(root_path, dataset_type)
-            FPDataCollector.static_clear_database_dist(root_path, dataset_type)
-        else:
-            GTDataCollector.static_clear_database(root_path, dataset_type)
-            FPDataCollector.static_clear_database(root_path, dataset_type)

@@ -84,6 +84,8 @@ class BaseCollector:
     def generate_single_db(self, labels, batch_dict, db_infos):
         batch_size = batch_dict['batch_size']
         for batch_idx in range(batch_size):
+            if labels[batch_idx] is None:
+                continue
             boxes = labels[batch_idx]['boxes'].cpu().detach().numpy()
             num_obj = boxes.shape[0]
 
@@ -126,7 +128,7 @@ class BaseCollector:
                         'difficulty': difficulty[i], 'bbox': bbox_2d[i], 'score': -1.0,
                         'pred_score': box_scores[i], 'cls_score': -1.0}
                 if box_names[i] in db_infos.keys():
-                    db_infos[box_names[i]].extend(db_info)
+                    db_infos[box_names[i]].append(db_info)
                 else:
                     db_infos[box_names[i]] = [db_info]
         return db_infos
