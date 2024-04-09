@@ -183,11 +183,10 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                     if (cur_epoch + 1) % sampling_config.INTERVAL == 0 and stop_sampling_flag:
                         collector.sample_labels()
                         if collector is not None:
-                            buffer += 1
                             if fp_sampler is not None:
-                                fp_sampler.update_db_infos(buffer)
+                                fp_sampler.update_db_infos(cur_epoch)
                             if gt_sampler is not None:
-                                gt_sampler.update_db_infos(buffer)
+                                gt_sampler.update_db_infos(cur_epoch)
         
             # train one epoch
             if lr_warmup_scheduler is not None and cur_epoch < optim_cfg.WARMUP_EPOCH:

@@ -203,7 +203,7 @@ class DataBaseSampler(object):
             elif (buffer > self.sampler_cfg["EASY_SAMPLES_EPOCH"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES_EPOCH"]):
                 sampling_mask = class_scores < self.sampler_cfg["HARD_THRESHOLD"]
             else:
-                sampling_mask = np.ones_like(class_scores)
+                sampling_mask = np.ones_like(class_scores, dtype=np.bool_)
         else:
             sampling_mask = None
         
@@ -212,7 +212,7 @@ class DataBaseSampler(object):
         elif ratio_sampling_type == 'curriculum_negative':
             weight[sampling_mask] = 1
         elif ratio_sampling_type == 'uniform':
-            weight = np.ones_like(class_scores)
+            weight = np.ones_like(class_scores, dtype=np.int64)
         else:
             raise NotImplementedError
         
