@@ -55,7 +55,7 @@ class DataCollector:
             gt_pred_dict_list = []
             for batch_idx in range(batch_size):
                 pred_scores = pred_dicts[batch_idx]['pred_scores']
-                gt_boxes = batch_dict['gt_boxes'][batch_idx]
+                gt_boxes = batch_dict['gt_boxes'][batch_idx][batch_dict['gt_boxes'][batch_idx][:,-1].long() != 0]
                 pred_boxes = pred_dicts[batch_idx]['pred_boxes']
                 pred_classes = pred_dicts[batch_idx]['pred_labels']
                 if pred_boxes.shape[0] == 0:
@@ -78,7 +78,7 @@ class DataCollector:
                 })
                 gt_pred_dict_list.append({
                     'boxes': gt_boxes[:, :7],
-                    'labels': gt_boxes[:, -1].to(torch.int64),
+                    'labels': gt_boxes[:, -1].to(torch.int32),
                     'scores' : max_ious_gt
                 })
 
