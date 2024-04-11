@@ -24,11 +24,11 @@ class DataBaseSampler(object):
         self.img_aug_type = sampler_cfg.get('IMG_AUG_TYPE', None)
         self.img_aug_iou_thresh = sampler_cfg.get('IMG_AUG_IOU_THRESH', 0.5)
         self.ratio_sampling_type = sampler_cfg.get('RATIO_SAMPLING_TYPE', 'uniform')
+        self.use_shared_memory = self.sampler_cfg.get('USE_SHARED_MEMORY', False)
 
         self.logger = logger
         self.db_infos = {}
-        self.init = True
-        self.update_db_infos()
+        self.initialized = False
 
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -50,18 +50,22 @@ class DataBaseSampler(object):
                 dist.barrier()
             self.logger.info('GT database has been removed from shared memory')
             
-    def update_db_infos(self, buffer=0):
+    def update_db_infos(self, cur_epoch=0):
         for class_name in self.class_names:
             self.db_infos[class_name] = []
 
-        self.use_shared_memory = self.sampler_cfg.get('USE_SHARED_MEMORY', False)
-        self.buffer = buffer
+        self.cur_epoch = cur_epoch
+
+        if 'RUNTIME_DB_INFO_PATH' in self.sampler_cfg:
+            db_info_path = self.root_path.resolve() / self.sampler_cfg.RUNTIME_DB_INFO_PATH
+            if db_info_path.exists():
+                self.sampler_cfg.DB_INFO_PATH = [self.sampler_cfg.pop('RUNTIME_DB_INFO_PATH')]
+        if 'DB_INFO_PATH' not in self.sampler_cfg:
+            self.sampler_cfg.DB_INFO_PATH = []
 
         for db_info_path in self.sampler_cfg.DB_INFO_PATH:
             db_info_path = self.root_path.resolve() / db_info_path
             if not db_info_path.exists():
-                if 'fp' in str(db_info_path):
-                    continue
                 assert len(self.sampler_cfg.DB_INFO_PATH) == 1
                 self.sampler_cfg.DB_INFO_PATH[0] = self.sampler_cfg.BACKUP_DB_INFO['DB_INFO_PATH']
                 db_info_path = self.root_path.resolve() / self.sampler_cfg.DB_INFO_PATH[0]
@@ -80,34 +84,41 @@ class DataBaseSampler(object):
         self.sample_class_num = {}
         self.limit_whole_scene = self.sampler_cfg.get('LIMIT_WHOLE_SCENE', False)
 
-        if self.init and self.sampling_type == 'gt':
-            if 'SAMPLE_GROUPS_INIT' in self.sampler_cfg:  
-                self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
-            else:
-                self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS  
-        else:
-            self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
-            
-        for x in self.sample_groups_cfg:
-            class_name, sample_num = x.split(':')
-            if class_name not in self.class_names:
-                continue
-            self.sample_class_num[class_name] = sample_num
-            self.sample_groups[class_name] = {
-                'sample_num': sample_num,
-                'pointer': len(self.db_infos[class_name]),
-                'indices': np.arange(len(self.db_infos[class_name]))
-            }
+        self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
+        self.sample_groups_cfg = [x.split(':') for x in self.sample_groups_cfg]
+        self.sample_groups_cfg = {x[0]: int(x[1]) for x in self.sample_groups_cfg}
+
+        self.sample_groups_cfg_init = self.sampler_cfg.get('SAMPLE_GROUPS_INIT', None)
+        if self.sample_groups_cfg_init is not None:
+            self.sample_groups_cfg_init = [x.split(':') for x in self.sample_groups_cfg_init]
+            self.sample_groups_cfg_init = {x[0]: int(x[1]) for x in self.sample_groups_cfg_init}
             
         self.scores = {}  
-        for class_name in self.class_names:
+        for class_name, sample_num in self.sample_groups_cfg.items():
+            if class_name not in self.class_names:
+                continue
+
             pred_scores = [] 
             for db_info in self.db_infos[class_name]:
                 pred_score = db_info.get('pred_score')
                 pred_scores.append(pred_score)
-            self.scores[class_name] = pred_scores  
+            self.scores[class_name] = pred_scores
 
-        self.init = False
+            indices = np.arange(len(self.db_infos[class_name]))
+            weights = self.calculate_weights(
+                np.array(self.scores[class_name]), class_name, buffer=self.cur_epoch, ratio_sampling_type=self.ratio_sampling_type
+            )
+            indices = np.repeat(indices, weights)
+
+            if not self.initialized and self.sample_groups_cfg_init is not None:
+                self.sample_class_num[class_name] = self.sample_groups_cfg_init[class_name]
+            else:
+                self.sample_class_num[class_name] = sample_num
+            self.sample_groups[class_name] = {
+                'sample_num': self.sample_class_num[class_name],
+                'pointer': len(self.db_infos[class_name]),
+                'indices': np.random.permutation(indices)
+            }
             
     def load_db_to_shared_memory(self):
         self.logger.info('Loading GT database to shared memory')
@@ -174,18 +185,9 @@ class DataBaseSampler(object):
         Returns:
 
         """
-        sample_num, pointer, indices = int(sample_group['sample_num']), sample_group['pointer'], sample_group['indices']
+        sample_num, pointer, indices = sample_group['sample_num'], sample_group['pointer'], sample_group['indices']
         if pointer >= len(self.db_infos[class_name]):
-            if len(self.scores) == 0 or np.any(np.array(self.scores[class_name]) == None):
-                weights = None
-            else:
-                weights = self.calculate_weights(
-                    np.array(self.scores[class_name]), buffer=self.buffer, ratio_sampling_type=self.ratio_sampling_type
-                )
-
-            if weights is not None:
-                indices = np.repeat(np.arange(len(self.db_infos[class_name])), weights)
-            indices = np.random.permutation(indices)
+            indices = np.random.permutation(len(self.db_infos[class_name]))
             pointer = 0
 
         sampled_dict = [self.db_infos[class_name][idx] for idx in indices[pointer: pointer + sample_num]]
@@ -194,38 +196,45 @@ class DataBaseSampler(object):
         sample_group['indices'] = indices
         return sampled_dict
     
-    def calculate_weights(self, class_scores, buffer=0, nbins=10, ratio_sampling_type=None):
+    def calculate_weights(self, class_scores, class_name, buffer=0, nbins=10, ratio_sampling_type=None):
+        def disp_log(class_name, sampling_mask):
+            if self.logger is not None:
+                self.logger.info('%s : Database filter by confidence scores %s: %d => %d' %
+                                    (self.sampling_type.upper(), class_name, len(sampling_mask), sampling_mask.sum()))
+                    
         weight = np.zeros_like(class_scores)
+        sampling_mask = np.ones_like(class_scores, dtype=np.bool_)
 
-        if 'curriculum' in ratio_sampling_type:
-            if buffer <= self.sampler_cfg["EASY_SAMPLES_EPOCH"]:
-                sampling_mask = class_scores < self.sampler_cfg["EASY_THRESHOLD"]
-            elif (buffer > self.sampler_cfg["EASY_SAMPLES_EPOCH"]) & (buffer <= self.sampler_cfg["HARD_SAMPLES_EPOCH"]):
-                sampling_mask = class_scores < self.sampler_cfg["HARD_THRESHOLD"]
-            else:
-                sampling_mask = np.ones_like(class_scores)
-        else:
-            sampling_mask = None
+        if len(class_scores) == 0 or np.any(class_scores == None):
+            disp_log(class_name, sampling_mask)
+            return weight.astype(np.int64)
         
-        if ratio_sampling_type == 'curriculum_positive':
-            weight[~sampling_mask] = 1
-        elif ratio_sampling_type == 'curriculum_negative':
-            weight[sampling_mask] = 1
-        elif ratio_sampling_type == 'uniform':
-            weight = np.ones_like(class_scores)
+        if 'curriculum' in ratio_sampling_type:
+            update_epochs = self.sampler_cfg.UPDATE_EPOCHS
+            update_epochs.append(1e9)
+            for i, rng in enumerate(self.sampler_cfg.UPDATE_RANGES):
+                if buffer >= update_epochs[i] and buffer < update_epochs[i+1]:
+                    sampling_mask = (class_scores > rng[0]) * (class_scores < rng[1])
+                    self.initialized = True
+                    break
+        weight[sampling_mask] = 1
+        
+        if 'uniform' in ratio_sampling_type:
+            # perform uniform sampling for each interval
+            bins = np.linspace(0, 1, nbins + 1)
+            digitized = np.digitize(class_scores, bins)
+            bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
+            bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
+            for i in range(1, nbins+1):
+                weight[digitized == i] *= bin_weights[i-1]
+        elif 'raw' in ratio_sampling_type:
+            pass
         else:
             raise NotImplementedError
         
-        # perform uniform sampling for each interval
-        bins = np.linspace(0, 1, nbins + 1)
-        digitized = np.digitize(class_scores, bins)
-        bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
-        bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
-
-        for i in range(1, nbins+1):
-            weight[digitized == i] *= bin_weights[i-1]
-
+        disp_log(class_name, sampling_mask)
         return weight.astype(np.int64)
+
 
     @staticmethod
     def put_boxes_on_road_planes(gt_boxes, road_planes, calib):
@@ -448,13 +457,11 @@ class DataBaseSampler(object):
             gt_boxes_mask = data_dict['gt_boxes_mask']
             gt_boxes = data_dict['gt_boxes'][gt_boxes_mask]
             gt_names = data_dict['gt_names'][gt_boxes_mask]
-            if self.sampler_cfg.get('USE_ROAD_PLANE', False) and mv_height is None:
-                sampled_gt_boxes, mv_height = self.put_boxes_on_road_planes(
-                    sampled_gt_boxes, data_dict['road_plane'], data_dict['calib']
-                )
-                data_dict.pop('calib')
-                data_dict.pop('road_plane')
-                
+        if self.sampler_cfg.get('USE_ROAD_PLANE', False) and mv_height is None:
+            sampled_gt_boxes, mv_height = self.put_boxes_on_road_planes(
+                sampled_gt_boxes, data_dict['road_plane'], data_dict['calib']
+            )
+
         points = data_dict['points']
         obj_points_list = []
 
@@ -483,10 +490,9 @@ class DataBaseSampler(object):
             assert obj_points.shape[0] == info['num_points_in_gt']
             obj_points[:, :3] += info['box3d_lidar'][:3].astype(np.float32)
             
-            if self.sampling_type == 'gt':
-                if self.sampler_cfg.get('USE_ROAD_PLANE', False):
-                    # mv height
-                    obj_points[:, 2] -= mv_height[idx]
+            if self.sampler_cfg.get('USE_ROAD_PLANE', False):
+                # mv height
+                obj_points[:, 2] -= mv_height[idx]
 
             if self.img_aug_type is not None:
                 img_aug_gt_dict, obj_points = self.collect_image_crops(
@@ -522,8 +528,6 @@ class DataBaseSampler(object):
             data_dict['gt_boxes'] = gt_boxes
             data_dict['gt_names'] = gt_names
             data_dict['points'] = points
-            
-        
         elif self.sampling_type == 'fp':
             points = box_utils.remove_points_in_boxes3d(points, large_sampled_gt_boxes)
             points = np.concatenate([obj_points[:, :points.shape[-1]], points], axis=0)
@@ -554,7 +558,7 @@ class DataBaseSampler(object):
         for class_name, sample_group in self.sample_groups.items():
             if self.limit_whole_scene:
                 num_gt = np.sum(class_name == gt_names)
-                sample_group['sample_num'] = str(int(self.sample_class_num[class_name]) - num_gt)
+                sample_group['sample_num'] = str(self.sample_class_num[class_name] - num_gt)
             if int(sample_group['sample_num']) > 0:
                 sampled_dict = self.sample_with_fixed_number(class_name, sample_group)
 
