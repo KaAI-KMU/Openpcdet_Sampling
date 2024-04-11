@@ -1,9 +1,5 @@
-import torch
 import numpy as np
 
-from pathlib import Path
-
-from ..ops.roiaware_pool3d import roiaware_pool3d_utils
 from .base_collector import BaseCollector
 
 
