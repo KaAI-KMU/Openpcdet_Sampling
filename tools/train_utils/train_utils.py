@@ -37,7 +37,6 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
             batch = next(dataloader_iter)
             print('new iters')
             
-        
         data_timer = time.time()
         cur_data_time = data_timer - end
 
@@ -159,8 +158,14 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
     # use for disable data augmentation hook
     hook_config = cfg.get('HOOK', None) 
     augment_disable_flag = False
-    buffer = start_epoch
 
+    gt_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='gt_sampling')
+    fp_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='fp_sampling')
+    if gt_sampler is not None:
+        gt_sampler.update_db_infos(start_epoch)
+    if fp_sampler is not None:
+        fp_sampler.update_db_infos(start_epoch)
+        
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
         total_it_each_epoch = len(train_loader)
         if merge_all_iters_to_one_epoch:
@@ -168,21 +173,9 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             train_loader.dataset.merge_all_iters_to_one_epoch(merge=True, epochs=total_epochs)
             total_it_each_epoch = len(train_loader) // max(total_epochs, 1)
 
-        if sampling_config is not None:
-            fp_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='fp_sampling')
-            gt_sampler = train_loader.dataset.data_augmentor.get_augmentor(name='gt_sampling')
 
         dataloader_iter = iter(train_loader)
         for cur_epoch in tbar:
-            if sampling_config is not None:
-                if (cur_epoch + 1) % sampling_config.INTERVAL == 0:
-                    collector.sample_labels()
-                    if fp_sampler is not None:
-                        fp_sampler.update_db_infos(buffer)
-                    if gt_sampler is not None:
-                        gt_sampler.update_db_infos(buffer)
-                    buffer += 1
-
             if train_sampler is not None:
                 train_sampler.set_epoch(cur_epoch)
         
@@ -191,6 +184,17 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 cur_scheduler = lr_warmup_scheduler
             else:
                 cur_scheduler = lr_scheduler
+
+            if sampling_config is not None:
+                sample_flag = (cur_epoch >= sampling_config.START_EPOCH) and \
+                    ((cur_epoch == sampling_config.START_EPOCH) or \
+                    (cur_epoch - sampling_config.START_EPOCH) % sampling_config.INTERVAL == 0)
+                if sample_flag:
+                    collector.sample_labels()
+                    if gt_sampler is not None:
+                        gt_sampler.update_db_infos(cur_epoch)
+                    if fp_sampler is not None:
+                        fp_sampler.update_db_infos(cur_epoch)
             
             augment_disable_flag = disable_augmentation_hook(hook_config, dataloader_iter, total_epochs, cur_epoch, cfg, augment_disable_flag, logger)
             accumulated_iter = train_one_epoch(
