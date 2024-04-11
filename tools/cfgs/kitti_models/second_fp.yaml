@@ -8,9 +8,8 @@ DATA_CONFIG:
             - NAME: gt_sampling
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
-                  - KittiDataset_gt_dbinfos_runtime.pkl
-              BACKUP_DB_INFO:
-                DB_INFO_PATH: kitti_dbinfos_train.pkl
+                  - kitti_dbinfos_train.pkl
+              RUNTIME_DB_INFO_PATH: KittiDataset_gt_dbinfos_runtime.pkl
               PREPARE: {
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
@@ -22,16 +21,14 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'curriculum_positive'
-              EASY_SAMPLES_EPOCH : 10
-              HARD_SAMPLES_EPOCH : 40
-              EASY_THRESHOLD : 0.6
-              HARD_THRESHOLD : 0.3
+
+              RATIO_SAMPLING_TYPE: 'curriculum_uniform'
+              UPDATE_EPOCHS: [5, 10, 40]
+              UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
 
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
-              DB_INFO_PATH:
-                  - KittiDataset_fp_dbinfos_runtime.pkl
+              RUNTIME_DB_INFO_PATH: KittiDataset_fp_dbinfos_runtime.pkl
               PREPARE: {
                   filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                   filter_by_difficulty: [-1],
@@ -41,11 +38,10 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
-              RATIO_SAMPLING_TYPE: 'curriculum_negative'
-              EASY_SAMPLES_EPOCH : 10
-              HARD_SAMPLES_EPOCH : 40
-              EASY_THRESHOLD : 0.3
-              HARD_THRESHOLD : 0.6
+
+              RATIO_SAMPLING_TYPE: 'curriculum_uniform'
+              UPDATE_EPOCHS: [5, 10, 40]
+              UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
               
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']
@@ -57,12 +53,10 @@ DATA_CONFIG:
               WORLD_SCALE_RANGE: [0.95, 1.05]
 
     LABEL_GENERATING_CONFIG:
-        CLS_THRESHOLD: [0.9, 0.9, 0.9]
-        IOU_THRESHOLD: [0.9, 0.7, 0.7]
+        START_EPOCH: 5
         INTERVAL: 5
-        K : 0.5
+        SCORE_KEY: 'cls'
         REMOVE_THRESHOLD: 0.0
-        Dataset : 'KITTI'
 
 MODEL:
     NAME: SECONDNet
