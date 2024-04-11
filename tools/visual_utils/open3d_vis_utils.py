@@ -16,26 +16,30 @@ box_colormap = [
 ]
 
     
-def draw_batch(batch_dict, pred_dicts, aug_pred_dicts=None, threshold=None):
+def draw_batch(batch_dict, pred_dicts=None, aug_pred_dicts=None, threshold=None):
     batch_points = batch_dict['points']
-    
-    for i in range(batch_dict['batch_size']):
-        if pred_dicts[i]['pred_boxes'].shape[0] <= 0: 
-            continue
-        
+    batch_size = batch_dict['batch_size']
+    for i in range(batch_size):
         points = batch_points[batch_points[:, 0] == i][:, 1:]
         if 'gt_boxes' in batch_dict:
-            gt_boxes = batch_dict['gt_boxes'][i][:7]
+            gt_boxes = batch_dict['gt_boxes'][i][:,:7]
         
-        if threshold is None:
-            mask = torch.ones(pred_dicts[i]['pred_scores'].shape[0], dtype=torch.bool)
+        if pred_dicts is not None:
+            if pred_dicts[i]['pred_boxes'].shape[0] <= 0: 
+                continue
+            if threshold is None:
+                mask = torch.ones(pred_dicts[i]['pred_scores'].shape[0], dtype=torch.bool)
+            else:
+                mask = pred_dicts[i]['pred_scores'] >= threshold
+            ref_boxes = pred_dicts[i]['pred_boxes'][mask]
+            ref_scores = pred_dicts[i]['pred_scores'][mask]
+            ref_labels = pred_dicts[i]['pred_labels'][mask]
         else:
-            mask = pred_dicts[i]['pred_scores'] >= threshold
-        ref_boxes = pred_dicts[i]['pred_boxes'][mask]
-        ref_scores = pred_dicts[i]['pred_scores'][mask]
-        ref_labels = pred_dicts[i]['pred_labels'][mask]
+            ref_boxes = None
+            ref_scores = None
+            ref_labels = None
+            
         draw_scenes(points, gt_boxes, ref_boxes, ref_labels, ref_scores)
-        
 
 
 def get_coor_colors(obj_labels):
