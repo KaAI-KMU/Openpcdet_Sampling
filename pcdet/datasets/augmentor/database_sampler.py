@@ -24,8 +24,8 @@ class DataBaseSampler(object):
         
         self.img_aug_type = sampler_cfg.get('IMG_AUG_TYPE', None)
         self.img_aug_iou_thresh = sampler_cfg.get('IMG_AUG_IOU_THRESH', 0.5)
-        self.sampling_method = sampler_cfg.SAMPLING_METHOD
-        self.weighting_method = sampler_cfg.WEIGHTING_METHOD
+        self.sampling_method = sampler_cfg.get('SAMPLING_METHOD', 'default')
+        self.weighting_method = sampler_cfg.get('WEIGHTING_METHOD', 'raw')
         self.use_shared_memory = self.sampler_cfg.get('USE_SHARED_MEMORY', False)
 
         self.logger = logger
@@ -81,21 +81,17 @@ class DataBaseSampler(object):
 
         self.gt_database_data_key = self.load_db_to_shared_memory() if self.use_shared_memory else None
 
-        self.scores = []
         self.sample_groups = {}
         self.sample_class_num = {}
         self.limit_whole_scene = self.sampler_cfg.get('LIMIT_WHOLE_SCENE', False)
 
         self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS
+        if 'SAMPLE_GROUPS_INIT' in self.sampler_cfg and self.sampler_cfg.INIT_EPOCH > self.cur_epoch:
+            self.sample_groups_cfg = self.sampler_cfg.SAMPLE_GROUPS_INIT
         self.sample_groups_cfg = [x.split(':') for x in self.sample_groups_cfg]
         self.sample_groups_cfg = {x[0]: int(x[1]) for x in self.sample_groups_cfg}
-
-        self.sample_groups_cfg_init = self.sampler_cfg.get('SAMPLE_GROUPS_INIT', None)
-        if self.sample_groups_cfg_init is not None:
-            self.sample_groups_cfg_init = [x.split(':') for x in self.sample_groups_cfg_init]
-            self.sample_groups_cfg_init = {x[0]: int(x[1]) for x in self.sample_groups_cfg_init}
             
-        self.scores = {}  
+        self.scores = {}
         for class_name, sample_num in self.sample_groups_cfg.items():
             if class_name not in self.class_names:
                 continue
@@ -112,14 +108,12 @@ class DataBaseSampler(object):
             )
             indices = np.repeat(indices, weights)
 
-            if not self.initialized and self.sample_groups_cfg_init is not None:
-                self.sample_class_num[class_name] = self.sample_groups_cfg_init[class_name]
-            else:
-                self.sample_class_num[class_name] = sample_num
+            self.sample_class_num[class_name] = sample_num
             self.sample_groups[class_name] = {
                 'sample_num': self.sample_class_num[class_name],
                 'pointer': len(self.db_infos[class_name]),
-                'indices': np.random.permutation(indices)
+                'indices': indices,
+                'num_infos': len(np.unique(indices))
             }
 
     def calculate_weights(self, scores, class_name):
@@ -138,7 +132,7 @@ class DataBaseSampler(object):
         
         if self.sampling_method == 'curriculum':
             update_epochs = self.sampler_cfg.UPDATE_EPOCHS
-            update_epochs.append(1e9)
+            update_epochs.append(int(1e5))
             use_ratio = self.sampler_cfg.USE_RATIO
             if use_ratio:
                 scores_ = np.sort(scores)
@@ -151,7 +145,6 @@ class DataBaseSampler(object):
                         lower_bound = rng[0]
                         upper_bound = rng[1]
                     sampling_mask = (scores > lower_bound) * (scores < upper_bound)
-                    self.initialized = True
                     break
         elif self.sampling_method == 'curriculum_sliding_window': # TODO: not debugged
             start_epoch = self.sampler_cfg.START_EPOCH
@@ -179,8 +172,6 @@ class DataBaseSampler(object):
             if not self.sampler_cfg.ASCENDING:
                 lower_bound, upper_bound = upper_bound, lower_bound
             sampling_mask = (scores >= lower_bound) * (scores < upper_bound)
-
-            self.initialized = True
         elif self.sampling_method == 'default':
             pass
         else:
@@ -189,16 +180,13 @@ class DataBaseSampler(object):
         weight[sampling_mask] = 1
         
         if self.weighting_method == 'uniform':
-            nbins = self.sampler_cfg.get('NBINS', 10)
+            nbins = self.sampler_cfg.NBINS
             bins = np.linspace(0, 1, nbins + 1)
             digitized = np.digitize(scores, bins)
             bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
             bin_weights = scores.shape[0] / (bin_counts + 1e-7)
             for i in range(1, nbins+1):
                 weight[digitized == i] *= bin_weights[i-1]
-        elif self.weighting_method == 'score_weighting': # TODO: not debugged
-            weight *= scores
-            weight *= 100
         elif self.weighting_method == 'raw':
             pass
         else:
@@ -273,22 +261,24 @@ class DataBaseSampler(object):
         Returns:
 
         """
-        sample_num, pointer, indices = sample_group['sample_num'], sample_group['pointer'], sample_group['indices']
-        if pointer >= len(self.db_infos[class_name]):
+        sample_num, pointer, indices, num_infos = \
+            sample_group['sample_num'], sample_group['pointer'], sample_group['indices'], sample_group['num_infos']
+        if pointer >= len(indices):
             indices = np.random.permutation(indices)
             pointer = 0
 
-        # sampled_dict = [self.db_infos[class_name][idx] for idx in indices[pointer: pointer + sample_num]] # TODO: remove this
         sampled_dict = []
         sampled_indices = []
-        for idx in indices[pointer:]:
-            if len(sampled_dict) >= sample_num:
-                break
-            if idx in sampled_indices:
+        cnt = 0
+        while len(sampled_dict) < sample_num and len(indices) > 0:
+            idx = indices[cnt % len(indices)]
+            cnt += 1
+            # Allow duplicate if sample_num is less than the number of extractable data
+            if idx in sampled_indices and sample_num <= num_infos:
                 continue
             sampled_dict.append(self.db_infos[class_name][idx])
             sampled_indices.append(idx)
-        pointer += sample_num
+        pointer += cnt
 
         sample_group['pointer'] = pointer
         sample_group['indices'] = indices
