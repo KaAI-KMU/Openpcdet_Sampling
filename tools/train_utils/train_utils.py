@@ -6,7 +6,6 @@ import time
 import glob
 from torch.nn.utils import clip_grad_norm_
 from pcdet.utils import common_utils, commu_utils
-from visual_utils.open3d_vis_utils import draw_batch
 
 
 def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, accumulated_iter, optim_cfg,
@@ -172,7 +171,6 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             assert hasattr(train_loader.dataset, 'merge_all_iters_to_one_epoch')
             train_loader.dataset.merge_all_iters_to_one_epoch(merge=True, epochs=total_epochs)
             total_it_each_epoch = len(train_loader) // max(total_epochs, 1)
-
 
         dataloader_iter = iter(train_loader)
         for cur_epoch in tbar:
