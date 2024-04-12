@@ -21,8 +21,9 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
 
-            #   RATIO_SAMPLING_TYPE: 'raw'
-              RATIO_SAMPLING_TYPE: 'curriculum_uniform'
+              SAMPLING_METHOD: 'curriculum'
+              WEIGHTING_METHOD: 'uniform'
+              USE_RATIO: False
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
 
@@ -39,8 +40,9 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
 
-            #   RATIO_SAMPLING_TYPE: 'raw'
-              RATIO_SAMPLING_TYPE: 'curriculum_uniform'
+              SAMPLING_METHOD: 'curriculum'
+              WEIGHTING_METHOD: 'uniform'
+              USE_RATIO: False
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
               
@@ -60,7 +62,6 @@ DATA_CONFIG:
         SCORE_KEY: 'cls'
         REMOVE_THRESHOLD: 0.0
         DISABLE_AUG_LIST:
-            - 'placeholder'
             - 'gt_sampling'
             - 'fp_sampling'
             - 'random_world_flip'

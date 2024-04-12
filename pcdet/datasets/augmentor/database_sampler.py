@@ -23,7 +23,8 @@ class DataBaseSampler(object):
         
         self.img_aug_type = sampler_cfg.get('IMG_AUG_TYPE', None)
         self.img_aug_iou_thresh = sampler_cfg.get('IMG_AUG_IOU_THRESH', 0.5)
-        self.ratio_sampling_type = sampler_cfg.get('RATIO_SAMPLING_TYPE', 'uniform')
+        self.sampling_method = sampler_cfg.SAMPLING_METHOD
+        self.weighting_method = sampler_cfg.WEIGHTING_METHOD
         self.use_shared_memory = self.sampler_cfg.get('USE_SHARED_MEMORY', False)
 
         self.logger = logger
@@ -106,7 +107,7 @@ class DataBaseSampler(object):
 
             indices = np.arange(len(self.db_infos[class_name]))
             weights = self.calculate_weights(
-                np.array(self.scores[class_name]), class_name, buffer=self.cur_epoch, ratio_sampling_type=self.ratio_sampling_type
+                np.array(self.scores[class_name]), class_name
             )
             indices = np.repeat(indices, weights)
 
@@ -120,46 +121,62 @@ class DataBaseSampler(object):
                 'indices': np.random.permutation(indices)
             }
 
-    def calculate_weights(self, class_scores, class_name, buffer, ratio_sampling_type=None):
+    def calculate_weights(self, scores, class_name):
         def disp_log(class_name, sampling_mask):
-            if self.logger is not None:
-                self.logger.info('%s : Database filter by confidence scores %s: %d => %d' %
-                                    (self.sampling_type.upper(), class_name, len(sampling_mask), sampling_mask.sum()))
-                    
-        weight = np.zeros_like(class_scores)
-        sampling_mask = np.ones_like(class_scores, dtype=np.bool_)
+            self.logger.info('%s : Database filter by confidence scores %s: %d => %d' %
+                                (self.sampling_type.upper(), class_name, len(sampling_mask), sampling_mask.sum()))
+            
+        weight = np.zeros_like(scores)
+        sampling_mask = np.ones_like(scores, dtype=np.bool_)
 
-        if len(class_scores) == 0 or np.any(class_scores == None):
-            disp_log(class_name, sampling_mask)
+        if len(scores) == 0 or np.any(scores == None):
+            if self.logger is not None:
+                disp_log(class_name, sampling_mask)
+                self.logger.info('No valid scores, any method using scores will be ignored')
             return weight.astype(np.int64)
         
-        if 'curriculum' in ratio_sampling_type:
+        if self.sampling_method == 'curriculum':
             update_epochs = self.sampler_cfg.UPDATE_EPOCHS
             update_epochs.append(1e9)
+            use_ratio = self.sampler_cfg.USE_RATIO
+            if use_ratio:
+                scores_ = np.sort(scores)[::-1]
             for i, rng in enumerate(self.sampler_cfg.UPDATE_RANGES):
-                if buffer >= update_epochs[i] and buffer < update_epochs[i+1]:
-                    sampling_mask = (class_scores > rng[0]) * (class_scores < rng[1])
+                if self.cur_epoch >= update_epochs[i] and self.cur_epoch < update_epochs[i+1]:
+                    if use_ratio:
+                        lower_bound = scores_[int(rng[0] * len(scores_))]
+                        upper_bound = scores_[int(rng[1] * len(scores_))]
+                    else:
+                        lower_bound = rng[0]
+                        upper_bound = rng[1]
+                    sampling_mask = (scores > lower_bound) * (scores < upper_bound)
                     self.initialized = True
                     break
+        elif self.sampling_method == 'default':
+            pass
+        else:
+            raise NotImplementedError
+
         weight[sampling_mask] = 1
         
-        if 'uniform' in ratio_sampling_type:
+        if self.weighting_method == 'uniform':
             nbins = self.sampler_cfg.get('NBINS', 10)
             bins = np.linspace(0, 1, nbins + 1)
-            digitized = np.digitize(class_scores, bins)
+            digitized = np.digitize(scores, bins)
             bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
-            bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
+            bin_weights = scores.shape[0] / (bin_counts + 1e-7)
             for i in range(1, nbins+1):
                 weight[digitized == i] *= bin_weights[i-1]
-        elif 'raw' in ratio_sampling_type:
-            pass
-        elif 'direct_weighting' in ratio_sampling_type:
-            weight *= class_scores
+        elif self.weighting_method == 'score_weighting':
+            weight *= scores
             weight *= 100
+        elif self.weighting_method == 'raw':
+            pass
         else:
             raise NotImplementedError
         
-        disp_log(class_name, sampling_mask)
+        if self.logger is not None:
+            disp_log(class_name, sampling_mask)
         return weight.astype(np.int64)
     
     def load_db_to_shared_memory(self):
