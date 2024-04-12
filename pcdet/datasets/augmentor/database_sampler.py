@@ -119,7 +119,49 @@ class DataBaseSampler(object):
                 'pointer': len(self.db_infos[class_name]),
                 'indices': np.random.permutation(indices)
             }
-            
+
+    def calculate_weights(self, class_scores, class_name, buffer, ratio_sampling_type=None):
+        def disp_log(class_name, sampling_mask):
+            if self.logger is not None:
+                self.logger.info('%s : Database filter by confidence scores %s: %d => %d' %
+                                    (self.sampling_type.upper(), class_name, len(sampling_mask), sampling_mask.sum()))
+                    
+        weight = np.zeros_like(class_scores)
+        sampling_mask = np.ones_like(class_scores, dtype=np.bool_)
+
+        if len(class_scores) == 0 or np.any(class_scores == None):
+            disp_log(class_name, sampling_mask)
+            return weight.astype(np.int64)
+        
+        if 'curriculum' in ratio_sampling_type:
+            update_epochs = self.sampler_cfg.UPDATE_EPOCHS
+            update_epochs.append(1e9)
+            for i, rng in enumerate(self.sampler_cfg.UPDATE_RANGES):
+                if buffer >= update_epochs[i] and buffer < update_epochs[i+1]:
+                    sampling_mask = (class_scores > rng[0]) * (class_scores < rng[1])
+                    self.initialized = True
+                    break
+        weight[sampling_mask] = 1
+        
+        if 'uniform' in ratio_sampling_type:
+            nbins = self.sampler_cfg.get('NBINS', 10)
+            bins = np.linspace(0, 1, nbins + 1)
+            digitized = np.digitize(class_scores, bins)
+            bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
+            bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
+            for i in range(1, nbins+1):
+                weight[digitized == i] *= bin_weights[i-1]
+        elif 'raw' in ratio_sampling_type:
+            pass
+        elif 'direct_weighting' in ratio_sampling_type:
+            weight *= class_scores
+            weight *= 100
+        else:
+            raise NotImplementedError
+        
+        disp_log(class_name, sampling_mask)
+        return weight.astype(np.int64)
+    
     def load_db_to_shared_memory(self):
         self.logger.info('Loading GT database to shared memory')
         cur_rank, world_size, num_gpus = common_utils.get_dist_info(return_gpu_per_machine=True)
@@ -187,54 +229,24 @@ class DataBaseSampler(object):
         """
         sample_num, pointer, indices = sample_group['sample_num'], sample_group['pointer'], sample_group['indices']
         if pointer >= len(self.db_infos[class_name]):
-            indices = np.random.permutation(len(self.db_infos[class_name]))
+            indices = np.random.permutation(indices)
             pointer = 0
 
-        sampled_dict = [self.db_infos[class_name][idx] for idx in indices[pointer: pointer + sample_num]]
+        # sampled_dict = [self.db_infos[class_name][idx] for idx in indices[pointer: pointer + sample_num]] # TODO: remove this
+        sampled_dict = []
+        sampled_indices = []
+        for idx in indices[pointer:]:
+            if len(sampled_dict) >= sample_num:
+                break
+            if idx in sampled_indices:
+                continue
+            sampled_dict.append(self.db_infos[class_name][idx])
+            sampled_indices.append(idx)
         pointer += sample_num
+
         sample_group['pointer'] = pointer
         sample_group['indices'] = indices
         return sampled_dict
-    
-    def calculate_weights(self, class_scores, class_name, buffer=0, nbins=10, ratio_sampling_type=None):
-        def disp_log(class_name, sampling_mask):
-            if self.logger is not None:
-                self.logger.info('%s : Database filter by confidence scores %s: %d => %d' %
-                                    (self.sampling_type.upper(), class_name, len(sampling_mask), sampling_mask.sum()))
-                    
-        weight = np.zeros_like(class_scores)
-        sampling_mask = np.ones_like(class_scores, dtype=np.bool_)
-
-        if len(class_scores) == 0 or np.any(class_scores == None):
-            disp_log(class_name, sampling_mask)
-            return weight.astype(np.int64)
-        
-        if 'curriculum' in ratio_sampling_type:
-            update_epochs = self.sampler_cfg.UPDATE_EPOCHS
-            update_epochs.append(1e9)
-            for i, rng in enumerate(self.sampler_cfg.UPDATE_RANGES):
-                if buffer >= update_epochs[i] and buffer < update_epochs[i+1]:
-                    sampling_mask = (class_scores > rng[0]) * (class_scores < rng[1])
-                    self.initialized = True
-                    break
-        weight[sampling_mask] = 1
-        
-        if 'uniform' in ratio_sampling_type:
-            # perform uniform sampling for each interval
-            bins = np.linspace(0, 1, nbins + 1)
-            digitized = np.digitize(class_scores, bins)
-            bin_counts = np.bincount(digitized, minlength=nbins + 1)[1:]
-            bin_weights = class_scores.shape[0] / (bin_counts + 1e-7)
-            for i in range(1, nbins+1):
-                weight[digitized == i] *= bin_weights[i-1]
-        elif 'raw' in ratio_sampling_type:
-            pass
-        else:
-            raise NotImplementedError
-        
-        disp_log(class_name, sampling_mask)
-        return weight.astype(np.int64)
-
 
     @staticmethod
     def put_boxes_on_road_planes(gt_boxes, road_planes, calib):
