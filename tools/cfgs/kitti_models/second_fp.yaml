@@ -9,23 +9,24 @@ DATA_CONFIG:
               USE_ROAD_PLANE: True
               DB_INFO_PATH:
                   - kitti_dbinfos_train.pkl
-              RUNTIME_DB_INFO_PATH: KittiDataset_gt_dbinfos_runtime.pkl
+            #   RUNTIME_DB_INFO_PATH: KittiDataset_gt_dbinfos_runtime.pkl
               PREPARE: {
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
               }
               SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
+              INIT_EPOCH: 5
               SAMPLE_GROUPS: ['Car:15','Pedestrian:7', 'Cyclist:10']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
 
-              SAMPLING_METHOD: 'curriculum'
-              WEIGHTING_METHOD: 'uniform'
-              USE_RATIO: False
-              UPDATE_EPOCHS: [5, 10, 40]
-              UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
+              SAMPLING_METHOD: 'default'
+              WEIGHTING_METHOD: 'raw'
+            #   USE_RATIO: False
+            #   UPDATE_EPOCHS: [5, 10, 40]
+            #   UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
 
             #   SAMPLING_METHOD: 'curriculum_sliding_window'
             #   WEIGHTING_METHOD: 'raw'
@@ -50,10 +51,11 @@ DATA_CONFIG:
 
               SAMPLING_METHOD: 'curriculum'
               WEIGHTING_METHOD: 'uniform'
+              NBINS: 10
               USE_RATIO: False
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
-              
+
             #   SAMPLING_METHOD: 'curriculum_sliding_window'
             #   WEIGHTING_METHOD: 'raw'
             #   START_EPOCH: 5
@@ -73,8 +75,7 @@ DATA_CONFIG:
 
     LABEL_GENERATING_CONFIG:
         START_EPOCH: 5
-        INTERVAL: 5
-        NBINS: 10
+        INTERVAL: 10
         SCORE_KEY: 'cls'
         REMOVE_THRESHOLD: 0.0
         DISABLE_AUG_LIST:
