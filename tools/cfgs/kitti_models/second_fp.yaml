@@ -14,7 +14,6 @@ DATA_CONFIG:
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
               }
-
               SAMPLE_GROUPS_INIT: ['Car:20','Pedestrian:15', 'Cyclist:15']
               SAMPLE_GROUPS: ['Car:15','Pedestrian:7', 'Cyclist:10']
               NUM_POINT_FEATURES: 4
@@ -22,6 +21,7 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
 
+            #   RATIO_SAMPLING_TYPE: 'raw'
               RATIO_SAMPLING_TYPE: 'curriculum_uniform'
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
@@ -39,6 +39,7 @@ DATA_CONFIG:
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
 
+            #   RATIO_SAMPLING_TYPE: 'raw'
               RATIO_SAMPLING_TYPE: 'curriculum_uniform'
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
@@ -55,8 +56,16 @@ DATA_CONFIG:
     LABEL_GENERATING_CONFIG:
         START_EPOCH: 5
         INTERVAL: 5
+        NBINS: 10
         SCORE_KEY: 'cls'
         REMOVE_THRESHOLD: 0.0
+        DISABLE_AUG_LIST:
+            - 'placeholder'
+            - 'gt_sampling'
+            - 'fp_sampling'
+            - 'random_world_flip'
+            - 'random_world_rotation'
+            - 'random_world_scaling'
 
 MODEL:
     NAME: SECONDNet

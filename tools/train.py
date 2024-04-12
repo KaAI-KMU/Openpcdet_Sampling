@@ -128,7 +128,6 @@ def main():
         merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
         total_epochs=args.epochs,
         seed=666 if args.fix_random_seed else None,
-        disable_augmentation=False
     )
 
     model = build_network(model_cfg=cfg.MODEL, num_class=len(cfg.CLASS_NAMES), dataset=train_set)
@@ -174,7 +173,6 @@ def main():
             merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
             total_epochs=args.epochs,
             seed=666 if args.fix_random_seed else None,
-            disable_augmentation=True
         )
         collector = data_collector.DataCollector(
             sampler_cfg=sampling_config, model = model, dataloader=sample_dataloader, use_dist=dist_train

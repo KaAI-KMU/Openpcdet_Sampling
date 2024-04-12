@@ -22,6 +22,11 @@ class DataCollector:
         self.dataloader = dataloader
         self.use_dist = use_dist
 
+        DISABLE_AUG_LIST = sampler_cfg.DISABLE_AUG_LIST
+        augmentor_config = self.dataloader.dataset.dataset_cfg.DATA_AUGMENTOR
+        augmentor_config.DISABLE_AUG_LIST = DISABLE_AUG_LIST
+        self.dataloader.dataset.data_augmentor.disable_augmentation(augmentor_config)
+
         score_key = sampler_cfg.get('score_key', None)
         if score_key is None:
             self.score_key = 'pred_scores'

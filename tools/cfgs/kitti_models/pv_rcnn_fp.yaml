@@ -14,13 +14,13 @@ DATA_CONFIG:
                  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
                  filter_by_difficulty: [-1],
               }
-
               SAMPLE_GROUPS_INIT: ['Car:15','Pedestrian:10', 'Cyclist:10']
               SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
               NUM_POINT_FEATURES: 4
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
+
               RATIO_SAMPLING_TYPE: 'curriculum_uniform'
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
@@ -37,6 +37,7 @@ DATA_CONFIG:
               DATABASE_WITH_FAKELIDAR: False
               REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
               LIMIT_WHOLE_SCENE: False
+              
               RATIO_SAMPLING_TYPE: 'curriculum_uniform'
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
@@ -55,6 +56,14 @@ DATA_CONFIG:
         INTERVAL: 5
         SCORE_KEY: 'iou'
         REMOVE_THRESHOLD: 0.0
+        NBINS: 10
+        DISABLE_AUG_LIST:
+            - 'placeholder'
+            - 'gt_sampling'
+            - 'fp_sampling'
+            - 'random_world_flip'
+            - 'random_world_rotation'
+            - 'random_world_scaling'
 
 MODEL:
     NAME: PVRCNN

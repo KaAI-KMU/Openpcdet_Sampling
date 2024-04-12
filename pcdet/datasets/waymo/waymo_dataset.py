@@ -21,9 +21,9 @@ from ..dataset import DatasetTemplate
 
 
 class WaymoDataset(DatasetTemplate):
-    def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, disable_augmentation=False):
+    def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         super().__init__(
-            dataset_cfg=dataset_cfg, class_names=class_names, training=training, root_path=root_path, logger=logger, disable_augmentation=disable_augmentation
+            dataset_cfg=dataset_cfg, class_names=class_names, training=training, root_path=root_path, logger=logger
         )
         self.data_path = self.root_path / self.dataset_cfg.PROCESSED_DATA_TAG
         self.split = self.dataset_cfg.DATA_SPLIT[self.mode]
