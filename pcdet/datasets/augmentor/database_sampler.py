@@ -2,6 +2,7 @@ import pickle
 
 import os
 import copy
+import math
 import numpy as np
 from skimage import io
 import torch
@@ -140,10 +141,10 @@ class DataBaseSampler(object):
             update_epochs.append(1e9)
             use_ratio = self.sampler_cfg.USE_RATIO
             if use_ratio:
-                scores_ = np.sort(scores)[::-1]
+                scores_ = np.sort(scores)
             for i, rng in enumerate(self.sampler_cfg.UPDATE_RANGES):
                 if self.cur_epoch >= update_epochs[i] and self.cur_epoch < update_epochs[i+1]:
-                    if use_ratio:
+                    if use_ratio: # TODO: not debugged
                         lower_bound = scores_[int(rng[0] * len(scores_))]
                         upper_bound = scores_[int(rng[1] * len(scores_))]
                     else:
@@ -152,6 +153,32 @@ class DataBaseSampler(object):
                     sampling_mask = (scores > lower_bound) * (scores < upper_bound)
                     self.initialized = True
                     break
+        elif self.sampling_method == 'curriculum_sliding_window': # TODO: not debugged
+            start_epoch = self.sampler_cfg.START_EPOCH
+            interval = self.sampler_cfg.INTERVAL
+            max_epoch = self.sampler_cfg.MAX_EPOCH
+            window_size_ratio = self.sampler_cfg.WINDOW_SIZE # ratio of window size to total scores
+            assert self.cur_epoch <= max_epoch, 'Current epoch should be less than max_epoch'
+
+            total_updates = math.ceil((max_epoch - start_epoch) // interval)
+            cur_update = math.ceil((self.cur_epoch - start_epoch) // interval)
+            assert total_updates > 1, 'Total updates should be larger than 1'
+            assert window_size_ratio * total_updates > 1, 'Your window size cannot cover whole range of scores during training'
+
+            window_size = int(window_size_ratio * len(scores))
+            start_idx = int(((len(scores) - window_size) / (total_updates - 1)) * cur_update)
+            end_idx = start_idx + window_size
+            if end_idx > len(scores):
+                start_idx = len(scores) - window_size
+                end_idx = len(scores)
+
+            # ascending for fp sampling and descending for gt sampling
+            scores_ = np.sort(scores) if self.sampler_cfg.ASCENDING else np.sort(scores)[::-1]
+            lower_bound = scores_[start_idx]
+            upper_bound = scores_[end_idx]
+            sampling_mask = (scores > lower_bound) * (scores < upper_bound)
+
+            self.initialized = True
         elif self.sampling_method == 'default':
             pass
         else:
@@ -167,7 +194,7 @@ class DataBaseSampler(object):
             bin_weights = scores.shape[0] / (bin_counts + 1e-7)
             for i in range(1, nbins+1):
                 weight[digitized == i] *= bin_weights[i-1]
-        elif self.weighting_method == 'score_weighting':
+        elif self.weighting_method == 'score_weighting': # TODO: not debugged
             weight *= scores
             weight *= 100
         elif self.weighting_method == 'raw':

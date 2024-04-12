@@ -26,6 +26,13 @@ DATA_CONFIG:
               USE_RATIO: False
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.6, 1.0], [0.3, 1.0], [0.0, 1.0]]
+            #   SAMPLING_METHOD: 'curriculum_sliding_window'
+            #   WEIGHTING_METHOD: 'raw'
+            #   START_EPOCH: 5
+            #   MAX_EPOCH: 80
+            #   INTERVAL: 5
+            #   WINDOW_SIZE: 0.5
+            #   ASCENDING: True
 
             - NAME: fp_sampling 
               USE_ROAD_PLANE: True
@@ -45,6 +52,13 @@ DATA_CONFIG:
               USE_RATIO: False
               UPDATE_EPOCHS: [5, 10, 40]
               UPDATE_RANGES: [[0.0, 0.3], [0.0, 0.6], [0.0, 1.0]]
+            #   SAMPLING_METHOD: 'curriculum_sliding_window'
+            #   WEIGHTING_METHOD: 'raw'
+            #   START_EPOCH: 5
+            #   MAX_EPOCH: 80
+            #   INTERVAL: 5
+            #   WINDOW_SIZE: 0.5
+            #   ASCENDING: True
               
             - NAME: random_world_flip
               ALONG_AXIS_LIST: ['x']
