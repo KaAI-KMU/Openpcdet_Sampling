@@ -160,8 +160,8 @@ class DataBaseSampler(object):
             window_size_ratio = self.sampler_cfg.WINDOW_SIZE # ratio of window size to total scores
             assert self.cur_epoch <= max_epoch, 'Current epoch should be less than max_epoch'
 
-            total_updates = math.ceil((max_epoch - start_epoch) // interval)
-            cur_update = math.ceil((self.cur_epoch - start_epoch) // interval)
+            total_updates = math.ceil((max_epoch - start_epoch) / interval)
+            cur_update = math.ceil((self.cur_epoch - start_epoch) / interval)
             assert total_updates > 1, 'Total updates should be larger than 1'
             assert window_size_ratio * total_updates > 1, 'Your window size cannot cover whole range of scores during training'
 
@@ -176,7 +176,9 @@ class DataBaseSampler(object):
             scores_ = np.sort(scores) if self.sampler_cfg.ASCENDING else np.sort(scores)[::-1]
             lower_bound = scores_[start_idx]
             upper_bound = scores_[end_idx]
-            sampling_mask = (scores > lower_bound) * (scores < upper_bound)
+            if not self.sampler_cfg.ASCENDING:
+                lower_bound, upper_bound = upper_bound, lower_bound
+            sampling_mask = (scores >= lower_bound) * (scores < upper_bound)
 
             self.initialized = True
         elif self.sampling_method == 'default':
