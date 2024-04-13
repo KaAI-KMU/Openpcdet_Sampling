@@ -128,6 +128,7 @@ class DataBaseSampler(object):
             if self.logger is not None:
                 disp_log(class_name, sampling_mask)
                 self.logger.info('No valid scores, any method using scores will be ignored')
+            weight[sampling_mask] = 1
             return weight.astype(np.int64)
         
         if self.sampling_method == 'curriculum':
@@ -606,8 +607,8 @@ class DataBaseSampler(object):
         for class_name, sample_group in self.sample_groups.items():
             if self.limit_whole_scene:
                 num_gt = np.sum(class_name == gt_names)
-                sample_group['sample_num'] = str(self.sample_class_num[class_name] - num_gt)
-            if int(sample_group['sample_num']) > 0:
+                sample_group['sample_num'] = self.sample_class_num[class_name] - num_gt
+            if sample_group['sample_num'] > 0:
                 sampled_dict = self.sample_with_fixed_number(class_name, sample_group)
 
                 if len(sampled_dict) == 0:
